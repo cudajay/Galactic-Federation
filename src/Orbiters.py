@@ -30,9 +30,6 @@ class Orbiter:
 
 
 class LocalOrbiter(Orbiter):
-    def __init__(self, id: int):
-        super.__init__(id)
-
     def load_model(self, pth: os.path):
         self.model = keras.models.load_model(pth)
 
@@ -44,10 +41,10 @@ class LocalOrbiter(Orbiter):
                                         verbose=True)
 
     def load_data(self, pth: os.path):
-        self.X = np.load(os.path.join(pth, self.cid + "_train_x.npy"))
-        self.y = np.load(os.path.join(pth, self.cid + "_train_y.npy"))
+        self.X = np.load(os.path.join(pth, "A-1_X.npy"))
+        self.y = np.load(os.path.join(pth, "A-1_y.npy"))
 
-    def run(self, pipe: Pipe):
+    def orbit(self, pipe: Pipe, cfg):
         while True:
             if pipe.poll():
                 msg = pipe.recv()
