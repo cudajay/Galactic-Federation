@@ -4,8 +4,10 @@ import time
 import random
 from tensorflow import keras
 import numpy as np
-from Orbiters import LocalOrbiter
+from Orbiters import LocalOrbiter, RemoteOrbiter
 import logging
+import paramiko
+from scp import SCPClient
 
 logging.basicConfig(filename="log.txt",
                     format='%(asctime)s %(message)s',
@@ -45,7 +47,7 @@ def magistrate(pipes, cfg):
                 if msg['type'] == 'close_pipe':
                     pipes.remove(p)
         if len(mdls) >= 3:
-            get_fed_avg(global_model ,mdls)
+            get_fed_avg(global_model, mdls)
             global_model.save("tmp.h5")
             for p in pipes:
                 p.send({f'type': 'update_model', 'content': f'tmp.h5'})
@@ -58,14 +60,32 @@ def main():
     pipes = []
     orbiters = []
     orb_jobs = []
-    logger = logging.getLogger()
+    # logger = logging.getLogger()
     # log all messages, debug and up
-    logger.setLevel(logging.INFO)
-    for i in range():
+    # logger.setLevel(logging.INFO)
+
+    data = []
+    with open('../configs/juan.yaml') as f:
+
+        configs = yaml.load(f, Loader=yaml.FullLoader)
+
+    # create Virtual workers
+    for i in range(3):
         x, y = mp.Pipe()
         pipes.append(x)
         orb = LocalOrbiter(i)
-        orb_jobs.append(mp.Process(target=orb.orbit, args=(y, 'f',)))
+        orb_jobs.append(mp.Process(target=orb.orbit,
+                                   args=(y,)))
+        orbiters.append(orb)
+
+    # create Remote workers
+    for cfg in configs:
+        i += 1
+        x, y = mp.Pipe()
+        pipes.append(x)
+        orb = RemoteOrbiter(i, cfg)
+        orb_jobs.append(mp.Process(target=orb.orbit,
+                                   args=(y, )))
         orbiters.append(orb)
 
     mj = mp.Process(target=magistrate, args=(pipes, 'f',))

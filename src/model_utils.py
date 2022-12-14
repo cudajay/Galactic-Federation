@@ -6,8 +6,8 @@ import argparse
 from time import time
 
 parser = argparse.ArgumentParser(description='Add something to describe args needs')
-parser.add_argument('-p', '--predict', default=None, required=False)
-parser.add_argument('-t', '--train', default=None, required=False)
+parser.add_argument('-p', '--predict', action=argparse.BooleanOptionalAction)
+parser.add_argument('-t', '--train', action=argparse.BooleanOptionalAction)
 
 
 def timer_func(func):
@@ -48,4 +48,9 @@ def predict():
 
 
 if __name__ == '__main__':
-    load_data(parser.path)
+    if parser.predict:
+        train()
+    elif parser.train:
+        predict()
+    else:
+        print("Not Option seleceted")
