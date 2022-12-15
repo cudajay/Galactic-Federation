@@ -1,6 +1,8 @@
 [
   {root_dir: "~/working", addr: "192.168.68.110", UserName: "meowcollins", Password: "meowmeow" },
-  {root_dir: "~/working", addr: "192.168.68.120", UserName: "jmeow", Password: "meowmeow" },
   {root_dir: "~/working", addr: "192.168.68.112", UserName: "meowcollins", Password: "meowmeow" },
   {root_dir: "~/working", addr: "192.168.68.127", UserName: "meowcollins", Password: "meowmeow" },
+  {root_dir: "~/working", addr: "192.168.68.120", UserName: "jmeow", Password: "meowmeow" },
+  {root_dir: "~/working", addr: "192.168.68.123", UserName: "jmeow", Password: "meowmeow" },
+  {root_dir: "~/working", addr: "192.168.68.126", UserName: "jmeow", Password: "meowmeow" }
 ]
