@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: flask-api4
+spec:
+  containers:
+    - name: flask-api
+      image: flask_api:latest
+      imagePullPolicy: Never
+      resources:
+        limits:
+           memory: "200Mi"
