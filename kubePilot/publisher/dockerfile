@@ -1,8 +1,10 @@
 FROM python:3.8-slim-buster
+RUN mkdir -p app/shared
 
 WORKDIR /app
-COPY . .
-RUN pip install -r requirements.txt
+COPY shared/ shared/
+COPY publisher/ .
+RUN pip install -r shared/requirements.txt
 
 EXPOSE 3001
 CMD ["python","pub.py"]
