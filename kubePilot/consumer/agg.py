@@ -1,4 +1,5 @@
 import pika
+import yaml
 from shared.two_way import Dummy
 from shared.burst_connection import Msg, Burst_connection
 import os
@@ -13,35 +14,43 @@ import glob
 from json import JSONEncoder
 import logging
 from multiprocessing import Queue
+
 LOG_FORMAT = ('%(levelname) -10s %(asctime)s %(name) -30s %(funcName) '
               '-35s %(lineno) -5d: %(message)s')
 LOGGER = logging.getLogger(__name__)
 
-class NumpyArrayEncoder(JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, numpy.ndarray):
-            return obj.tolist()
-        return JSONEncoder.default(self, obj)
+class Agg_BC(Burst_connection):
+    def __init__(self, writeto: str, consumefrom: str):
+        super().__init__(writeto, consumefrom)
+        self.raw_model = tf.keras.models.load_model(os.path.join('base-25.h5'))
+        self.working_model = tf.keras.models.load_model(os.path.join('base-25.h5'))
+        with open('config.yaml', 'r') as file:
+            self.cfg = dumps(yaml.safe_load(file))
 
-class iterer:
-    def __init__(self, x, y, chunk_size) -> None:
-         self.x = x
-         self.y = y
-         self.counter = 0
-         self.chunk_size = chunk_size
-         
-    def __next__(self):
-        start = self.chunk_size*self.counter #chunk size 
-        stop = self.chunk_size*(self.counter+1)
-        if start > self.x.shape[0] or stop > self.x.shape[0]:
-            self.counter = 0
-            start = self.chunk_size*self.counter #chunk size 
-            stop = self.chunk_size*(self.counter+1)
-        self.counter += 1
-        return (self.x[start:stop, :,:], self.y[start:stop, :])
+    def process_jobs(self):
+        while self.job_q:
+            job = self.job_q.pop(0)
+            assert (type(job) is dict)
+            if job['type'] == 'addQ':
+                self.broadcast_to.append(job['data'])
+                self.add_msg_to_q(job['data'], 
+                                self.QUEUE,
+                                self.raw_model.to_json(), 
+                                'update_model')
+                self.add_msg_to_q(job['data'], 
+                                self.QUEUE,
+                                self.cfg, 
+                                'update_config')
+                continue
+            if job['type'] == 'send_model_single':
+                self.add_msg_to_q(job['data'], 
+                                self.QUEUE,
+                                self.raw_model.to_json(), 
+                                'update_model')
+                continue
 
 
-dmy = Burst_connection('agg', 'agg')
+dmy = Agg_BC(None, 'agg')
 dmy.run()
 
 """

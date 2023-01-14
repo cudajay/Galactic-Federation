@@ -17,7 +17,7 @@ spec:
   selector:
     matchLabels:
       app: pub3
-  replicas: 4
+  replicas: 5
   template:
     metadata:
       labels:
@@ -27,6 +27,9 @@ spec:
       - name: rabbitmq-publisher
         image: pub3
         imagePullPolicy: Never
+        volumeMounts:
+        - name: hostvol
+          mountPath: /app/data
         ports:
         - containerPort: 80
         env:
@@ -44,6 +47,10 @@ spec:
             secretKeyRef:
               name: rabbitmq-publisher
               key: RABBIT_PASSWORD
+      volumes:
+      - name: hostvol
+        hostPath:
+          path: /home/docker/dummy
 ---
 apiVersion: v1
 kind: Service
