@@ -3,3 +3,5 @@ optimizer: 'adam'
 validation_split: 0.2
 dropout: 0.3
 lstm_batch_size: 64
+chunk_size: 196
+epochs: 8

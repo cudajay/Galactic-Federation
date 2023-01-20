@@ -1,7 +1,6 @@
 #!/bin/sh
 
-kubectl -n rabbits delete deployment cons1
-kubectl -n rabbits delete deployment pub3
+sh scripts/stop_deploys.sh
 
 kubectl -n rabbits apply -f deployments/agg.yaml
 kubectl -n rabbits apply -f deployments/worker.yaml
