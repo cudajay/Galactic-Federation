@@ -17,9 +17,18 @@ from multiprocessing import Queue
 from shared.utils import IIterable
 from random import shuffle
 
+from random import randint
+
+def random_with_N_digits(n):
+    range_start = 10**(n-1)
+    range_end = (10**n)-1
+    return randint(range_start, range_end)
+
+
 LOG_FORMAT = ('%(levelname) -10s %(asctime)s %(name) -30s %(funcName) '
               '-35s %(lineno) -5d: %(message)s')
 LOGGER = logging.getLogger(__name__)
+
 
 class Agg_BC(Burst_connection):
     def __init__(self, writeto: str, consumefrom: str):
@@ -31,7 +40,7 @@ class Agg_BC(Burst_connection):
         shuffle(self.data_files)
         LOGGER.warning(str(self.data_files))
         with open('config.yaml', 'r') as file:
-            self.cfg = dumps(yaml.safe_load(file))
+            self.cfg = yaml.safe_load(file)
         data = self.data_files.pop(0)
         data = data.replace("train", "test")
         x = np.load(data)

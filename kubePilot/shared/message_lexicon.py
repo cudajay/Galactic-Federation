@@ -4,6 +4,7 @@ from utils import IIterable
 from tensorflow.keras.models import model_from_json
 from tensorflow.keras.losses import MeanSquaredError
 import numpy as np
+mse = MeanSquaredError()
 
 from json import loads,dumps
 logging.basicConfig(level=logging.WARNING)
@@ -70,7 +71,7 @@ def job_handler(slf):
             slf.add_msg_to_q('agg', slf.QUEUE, slf.QUEUE,'update_config_req')
         #3b. agg processes job to send new config
         if job['type'] == "update_config_snd":
-            slf.add_msg_to_q(job['data'], slf.QUEUE, slf.cfg,'update_config')
+            slf.add_msg_to_q(job['data'], slf.QUEUE, dumps(slf.cfg),'update_config')
         #4b. worker processes job to add new config and responds with data req
         if job['type'] == 'update_config':
             slf.cfg = loads(job['data'])
@@ -93,48 +94,53 @@ def job_handler(slf):
         if job['type'] == 'train_ok':
             x,y = next(slf.idata)
             h = slf.model.fit(x,y,batch_size=64, epochs=8, validation_split=.2, verbose=True)
-            msg = {'id': slf.QUEUE, 'loss': h.history['loss'][-1], 'val_loss': h.history['val_loss'][-1], 'weigths': slf.model.train, 'step': slf.train_steps }
+            msg = {'id': slf.QUEUE, 'loss': h.history['loss'][-1], 'val_loss': h.history['val_loss'][-1], 'step': slf.train_steps }
             for i in range(len(slf.model.trainable_variables)):
-                msg[i] = slf.model.trainable_variables[i].numpy().tobytes()
+                msg[i] = slf.model.trainable_variables[i].numpy().tobytes().hex()
             slf.add_msg_to_q('agg', slf.QUEUE, dumps(msg),'train_metrics')
             slf.train_steps +=1
         if job['type'] == "process_metrics":
             dct = loads(job['data'])
             if dct['step'] not in slf.buffer:
-                slf.buffer[dct['step']] = {'id': dct}
+                slf.buffer[dct['step']] = [dct]
             else:
-                slf.buffer[dct['step']]['id'] =  dct 
-            if slf.buffer[dct['step']] == len(slf.comm_metrics.keys()):
+                slf.buffer[dct['step']].append(dct)
+            if len(slf.buffer[dct['step']]) == len(slf.comm_metrics.keys()):
                 ids = list(map(lambda x: x['id'], slf.buffer[dct['step']]))
                 ids = np.unique(ids)
                 assert(len(ids) == len(slf.comm_metrics))
+                for d in slf.buffer[dct['step']]:
+                    LOGGER.warning(str(d.keys()))
                 m = slf.raw_model
                 m.compile(loss=slf.cfg['loss_metric'], optimizer=slf.cfg['optimizer'])
                 for i in range(len(m.trainable_variables)):
                     update = np.zeros(m.trainable_variables[i].numpy().shape)
-                    vals = list(map(lambda x: x[i], slf.buffer[dct['step']]))
+                    vals = list(map(lambda x: x[str(i)], slf.buffer[dct['step']]))
                     for v in vals:
-                        update += np.ndarray(m.trainable_variables[i].numpy().shape, dtype=np.float32,buffer=v)
+                        update += np.ndarray(m.trainable_variables[i].numpy().shape, dtype=np.float32,buffer=bytes.fromhex(v))
                     update = update/len(slf.comm_metrics)
                     m.trainable_variables[i].assign(update)
                 x,y =  next(slf.idata)
                 yhat =  m.predict(x)
-                score = MeanSquaredError(yhat, y)
+                score = mse(yhat, y)
+                LOGGER.warning(f"TEST UPDATE: {score.numpy()}")
                 #report scores
                 #TODO
                 weights = {}
                 for i in range(len(m.trainable_variables)):
-                    weights[i] = m.trainable_variables[i].numpy().tobytes()
+                    weights[i] = m.trainable_variables[i].numpy().tobytes().hex()
                 #send broadcast signal to update_weights
-                q_items = list(map(lambda x: list(x.keys())[0],slf.comm_metrics))
+                q_items = list(slf.comm_metrics.keys())
                 for prty in q_items:
-                   slf.add_msg_to_q(prty slf.QUEUE, dumps(weights),'update_weights')
+                   slf.add_msg_to_q(prty, slf.QUEUE, dumps(weights),'update_weights')
+            else:
+                slf.add_msg_to_q(dct['id'], slf.QUEUE, "standbye", 'info')
                    
-        if job['update_weights']:
+        if job['type'] == 'update_weights':
             dct = loads(job['data'])
-            for i in range(len(self.model.trainable_variables)):
-                weights = np.ndarray(raw_model.trainable_variables[i].numpy().shape, dtype=np.float32,buffer=dct[i])
-                self.model.trainable_variables[i].assign(weights)
+            for i in range(len(slf.model.trainable_variables)):
+                weights = np.ndarray(slf.model.trainable_variables[i].numpy().shape, dtype=np.float32,buffer=bytes.fromhex(dct[str(i)]))
+                slf.model.trainable_variables[i].assign(weights)
             slf.add_msg_to_q('agg',  slf.QUEUE, slf.QUEUE,'train_req')
                     
 

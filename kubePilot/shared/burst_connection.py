@@ -34,9 +34,9 @@ class Burst_connection(ABC):
         self.msg_q = []
         self.job_q = []
         self.train_steps = 0
-        self.buffer = dict
+        self.buffer = {}
         self.max_buffer_items = 10
-        self.comm_metrics  = dict()
+        self.comm_metrics  = {}
         self.msg_id = 0
         self.idata = None
         
@@ -98,7 +98,7 @@ class Burst_connection(ABC):
             if action:
                 self.job_q.append(action)
             self.comm_metrics[src] = id
-        self._channel.basic_ack(method_frame.delivery_tag)
+            self._channel.basic_ack(method_frame.delivery_tag)
             
                 
     def get_messages(self):
@@ -119,6 +119,6 @@ class Burst_connection(ABC):
                 self.publish_queue()
                 self.get_messages()
                 self.process_jobs()
-                time.sleep(5)
+                time.sleep(2)
         except KeyboardInterrupt:
             self._channel.queue_delete(queue=self.QUEUE)
