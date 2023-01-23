@@ -3,7 +3,7 @@ aiohttp==3.8.3
 aiosignal==1.2.0
 astunparse==1.6.3
 async-timeout==4.0.2
-attrs==22.1.0
+attrs
 blinker==1.4
 brotlipy==0.7.0
 cachetools==4.2.2

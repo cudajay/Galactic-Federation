@@ -3,6 +3,7 @@ RUN mkdir -p app/shared
 
 WORKDIR /app
 COPY shared/ shared/
+RUN ls shared/
 COPY consumer/ .
 RUN pip install -r shared/requirements.txt
 

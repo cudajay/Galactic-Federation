@@ -4,7 +4,8 @@ import logging
 from pika.exchange_type import ExchangeType
 import functools
 import time
-from message_lexicon import msg_handler, job_handler
+from rule_engines import base_engine
+
 from abc import ABC, abstractmethod
 
 logging.basicConfig(level=logging.WARNING)
@@ -61,6 +62,7 @@ class Burst_connection(ABC):
         self._channel.close()
         connection.close()
         LOGGER.warning("Init completed")
+        self.re = Base_Engine(self)
 
 
     def add_msg_to_q(self, to, frm, data, ct="info"):
@@ -69,7 +71,8 @@ class Burst_connection(ABC):
         LOGGER.info("message added")
 
     def process_jobs(self):
-        job_handler(self)
+        while self.job_q:
+            self.re.exec(*self.job_q.pop(0))
 
     def publish_queue(self):
         if self.msg_q:
@@ -81,7 +84,8 @@ class Burst_connection(ABC):
                                                   content_type=msg.content_type,
                                                   headers={'id': self.msg_id,
                                                            'src': self.QUEUE})
-                LOGGER.warning(msg.data + " "+msg.content_type)
+                #LOGGER.info(msg.data + " "+msg.content_type)
+                assert(False)
                 self._channel.basic_publish(msg.to, 'generic', msg.data, properties)
                 self.msg_id += 1
                 LOGGER.info("Message sent")
@@ -94,11 +98,9 @@ class Burst_connection(ABC):
         if src not in self.comm_metrics:
             self.comm_metrics[src] = -1
         if self.comm_metrics[src] < id:            
-            action = msg_handler(method_frame, header_frame, body)
-            if action:
-                self.job_q.append(action)
+            self.job_q.append((method_frame, header_frame, body))
             self.comm_metrics[src] = id
-            self._channel.basic_ack(method_frame.delivery_tag)
+        self._channel.basic_ack(method_frame.delivery_tag)
             
                 
     def get_messages(self):

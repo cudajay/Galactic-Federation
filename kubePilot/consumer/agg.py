@@ -1,19 +1,13 @@
-import pika
 import yaml
-from shared.two_way import Dummy
 from shared.burst_connection import Msg, Burst_connection
 import os
-import time
 from json import dumps, loads
 import json
 import random
 import tensorflow as tf
-import numpy as np
-from tensorflow.keras.models import model_from_json
 import glob
 from json import JSONEncoder
 import logging
-from multiprocessing import Queue
 from shared.utils import IIterable
 from random import shuffle
 
