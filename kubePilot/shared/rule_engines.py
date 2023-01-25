@@ -3,6 +3,7 @@ from shared.utils import IIterable, Rule
 from tensorflow.keras.models import model_from_json
 from tensorflow.keras.losses import MeanSquaredError
 import numpy as np
+import json
 from json import loads, dumps
 mse = MeanSquaredError()
 
@@ -113,9 +114,14 @@ class Base_Engine:
         else:
             self.ch.buffer[dct['step']].append(dct)
         if len(self.ch.buffer[dct['step']]) == len(self.ch.comm_metrics.keys()):
+            data = {}
             ids = list(map(lambda x: x['id'], self.ch.buffer[dct['step']]))
             ids = np.unique(ids)
             assert(len(ids) == len(self.ch.comm_metrics))
+            for d in self.ch.buffer[dct['step']]:
+                data[f"{d['id']}-step"] = d['step']
+                data[f"{d['id']}-loss"] = d['loss']
+                data[f"{d['id']}-val_loss"] = d['val_loss']
             m = self.ch.raw_model
             m.compile(loss=self.ch.cfg['loss_metric'], optimizer=self.ch.cfg['optimizer'])
             for i in range(len(m.trainable_variables)):
@@ -128,6 +134,12 @@ class Base_Engine:
             x,y =  next(self.ch.idata)
             yhat =  m.predict(x)
             score = mse(yhat, y)
+            data['global-loss'] = score.numpy()
+            self.ch.run_data.append(data)
+            save_file = open(self.ch.run_metrics_location, "w")  
+            json.dump(self.ch.run_data, save_file, indent = 6)  
+            save_file.close()  
+            
             LOGGER.warning(f"TEST UPDATE: {score.numpy()}")
             #report scores
             #TODO
