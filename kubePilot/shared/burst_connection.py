@@ -4,7 +4,7 @@ import logging
 from pika.exchange_type import ExchangeType
 import functools
 import time
-from rule_engines import base_engine
+from shared.rule_engines import Base_Engine
 
 from abc import ABC, abstractmethod
 
@@ -72,7 +72,10 @@ class Burst_connection(ABC):
 
     def process_jobs(self):
         while self.job_q:
-            self.re.exec(*self.job_q.pop(0))
+            try:
+                self.re.exec(*self.job_q.pop(0))
+            except:
+                print("Trying null value error...")
 
     def publish_queue(self):
         if self.msg_q:
@@ -80,12 +83,17 @@ class Burst_connection(ABC):
             self._channel = connection.channel()
             while self.msg_q:
                 msg = self.msg_q.pop(0)
+                self._channel.exchange_declare(exchange=msg.to,
+                                            exchange_type=self.EXCHANGE_TYPE)
+                self._channel.queue_declare(queue=msg.to)
+                self._channel.queue_bind(msg.to,
+                                        msg.to,
+                                        routing_key=self.rk)
                 properties = pika.BasicProperties(app_id='Galactic Federation',
                                                   content_type=msg.content_type,
                                                   headers={'id': self.msg_id,
                                                            'src': self.QUEUE})
-                #LOGGER.info(msg.data + " "+msg.content_type)
-                assert(False)
+                LOGGER.warning(msg.data[0:100] + " "+msg.content_type)
                 self._channel.basic_publish(msg.to, 'generic', msg.data, properties)
                 self.msg_id += 1
                 LOGGER.info("Message sent")
@@ -116,11 +124,9 @@ class Burst_connection(ABC):
         connection.close()
 
     def run(self):
-        try:
-            while True:
-                self.publish_queue()
-                self.get_messages()
-                self.process_jobs()
-                time.sleep(2)
-        except KeyboardInterrupt:
-            self._channel.queue_delete(queue=self.QUEUE)
+        while True:
+            self.publish_queue()
+            self.get_messages()
+            self.process_jobs()
+            time.sleep(2)
+

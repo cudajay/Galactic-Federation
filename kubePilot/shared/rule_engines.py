@@ -1,10 +1,9 @@
-import pyrules
 import logging
-#from burst_connection import Burst_connection
-from utils import IIterable
+from shared.utils import IIterable, Rule
 from tensorflow.keras.models import model_from_json
 from tensorflow.keras.losses import MeanSquaredError
 import numpy as np
+from json import loads, dumps
 mse = MeanSquaredError()
 
 from json import loads,dumps
@@ -13,12 +12,23 @@ LOG_FORMAT = ('%(levelname) -10s %(asctime)s %(name) -30s %(funcName) '
               '-35s %(lineno) -5d: %(message)s')
 LOGGER = logging.getLogger(__name__)
 
+def data_handler(data):
+    if type(data) == bytes:
+        return data.decode()
+    if type(data) == str:
+        try:
+            return loads(data)
+        except:
+            print("\nproceeding with data as string\n")
+    return data
+
+
 class Base_Engine:
     def __init__(self, connection_handler):
         self.ch = connection_handler
-        self.rule_and_action = rules(self.handler, self.action_executor)
+        self.rule_and_action = Rule(self.handler, self.action_executor)
     def exec(self, method_frame, header_frame, body):
-        self.rule_and_action(method_frame, header_frame, body)
+        self.rule_and_action.execute(method_frame, header_frame, body)
     def handler(self, method_frame, header_frame, body):
         if method_frame:
             #1a. rec init from worker nodes
@@ -60,11 +70,11 @@ class Base_Engine:
             #10a worker, receives new weights and creates job to process them
             if header_frame.content_type == 'update_weights':
                 LOGGER.info(f"new weights added ")
-                return (self.update_weights_job, data)
+                return (self.update_weights_job, body)
         else:
-            return (self.null_job, None)
+            return (self.null_job, [])
     def action_executor(self, job, data):
-        job(data)
+        job(data_handler(data))
     def null_job(self, data):
         pass
     def init_job(self, data):
@@ -79,11 +89,11 @@ class Base_Engine:
         self.ch.model.compile(loss=self.ch.cfg['loss_metric'], optimizer=self.ch.cfg['optimizer'])
         self.ch.add_msg_to_q('agg', self.ch.QUEUE,self.ch.QUEUE, "update_data_req")
     def send_data_job(self, data):
-        self.ch.add_msg_to_q(data, self.QUEUE, self.ch.data_files.pop(0),'init_data')
+        self.ch.add_msg_to_q(data, self.ch.QUEUE, self.ch.data_files.pop(0),'init_data')
     def init_data_job(self, data):
         LOGGER.info(data)
         x = np.load(data)
-        y = np.load(data.decode('UTF-8').replace("_X", "_y"))
+        y = np.load(data.replace("_X", "_y"))
         self.ch.idata = IIterable(x, y, self.ch.cfg['chunk_size'])
         self.ch.add_msg_to_q('agg',  self.ch.QUEUE, self.ch.QUEUE,'train_req')
     def train_ok_send(self, data):

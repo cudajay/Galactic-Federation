@@ -16,3 +16,9 @@ class IIterable:
             self.pos += self.cs
         return (x,y)
 
+class Rule:
+    def __init__(self,rule_handler, action_handler) -> None:
+        self.rule_handler = rule_handler
+        self.action_handler = action_handler
+    def execute(self, *args,**kwargs):
+        self.action_handler(*self.rule_handler(*args, **kwargs))

@@ -1,16 +1,19 @@
 import yaml
+import pdb
 from shared.burst_connection import Msg, Burst_connection
 import os
 from json import dumps, loads
 import json
 import random
 import tensorflow as tf
+import numpy as np
 import glob
 from json import JSONEncoder
 import logging
 from shared.utils import IIterable
 from random import shuffle
-
+import datetime
+ 
 from random import randint
 
 def random_with_N_digits(n):
@@ -29,6 +32,7 @@ class Agg_BC(Burst_connection):
         super().__init__(writeto, consumefrom)
         self.raw_model = tf.keras.models.load_model(os.path.join('base-25.h5'))
         gb = glob.glob('data/25/train/*X.npy')
+        self.run_metrics_location = f'data/logs{datetime.datetime.now()}'
         #limited to data size right now
         self.data_files = [g for g in gb]
         shuffle(self.data_files)

@@ -1,4 +1,5 @@
 import os
+import pdb
 import socket
 from shared.burst_connection import Msg, Burst_connection
 from random import randint
@@ -15,7 +16,6 @@ class Pub_BC(Burst_connection):
         self.cfg = None
 
 def main():
-    
     hostname = socket.gethostname()
     IPAddr = socket.gethostbyname(hostname)
     IPAddr = str(IPAddr) + str(random_with_N_digits(5))
