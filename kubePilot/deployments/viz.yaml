@@ -16,12 +16,19 @@ spec:
       - name: viz
         image: viz
         imagePullPolicy: Never
+        volumeMounts:
+          - name: hostvol
+            mountPath: /app/data
         resources:
           limits:
             memory: "128Mi"
             cpu: "500m"
         ports:
         - containerPort: 5000
+      volumes:
+        - name: hostvol
+          hostPath:
+            path: /home/docker/dummy
 ---
 
 apiVersion: v1
