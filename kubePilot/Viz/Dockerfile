@@ -5,4 +5,4 @@ COPY . .
 
 RUN pip install -r requirements.txt
 
-ENTRYPOINT ["streamlit", "run", "app.py", "--server.port=5000", "--server.address=0.0.0.0"]
+ENTRYPOINT ["streamlit", "run", "Model_Performance.py", "--server.port=5000", "--server.address=0.0.0.0"]

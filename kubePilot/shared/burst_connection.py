@@ -4,8 +4,8 @@ import logging
 from pika.exchange_type import ExchangeType
 import functools
 import time
-from shared.rule_engines import Base_Engine
-
+from shared.rule_engines import Base_Engine, GT_fedAvg_Engine
+import sys
 from abc import ABC, abstractmethod
 
 logging.basicConfig(level=logging.WARNING)
@@ -40,6 +40,9 @@ class Burst_connection(ABC):
         self.comm_metrics  = {}
         self.msg_id = 0
         self.idata = None
+        self.ping = time.time()
+        self.pong = time.time()
+        self.size_buffer = []
         
         hst = os.getenv("RABBIT_HOST")
         prt = os.getenv("RABBIT_PORT")
@@ -62,7 +65,7 @@ class Burst_connection(ABC):
         self._channel.close()
         connection.close()
         LOGGER.warning("Init completed")
-        self.re = Base_Engine(self)
+        self.re = GT_fedAvg_Engine(self)
 
 
     def add_msg_to_q(self, to, frm, data, ct="info"):
@@ -83,6 +86,8 @@ class Burst_connection(ABC):
             self._channel = connection.channel()
             while self.msg_q:
                 msg = self.msg_q.pop(0)
+                if sys.getsizeof(msg.data):
+                    self.size_buffer.append(sys.getsizeof(msg.data))
                 self._channel.exchange_declare(exchange=msg.to,
                                             exchange_type=self.EXCHANGE_TYPE)
                 self._channel.queue_declare(queue=msg.to)
@@ -93,10 +98,11 @@ class Burst_connection(ABC):
                                                   content_type=msg.content_type,
                                                   headers={'id': self.msg_id,
                                                            'src': self.QUEUE})
-                LOGGER.warning(msg.data[0:100] + " "+msg.content_type)
+                LOGGER.warning("published: " +msg.data[0:100] + " "+msg.content_type)
                 self._channel.basic_publish(msg.to, 'generic', msg.data, properties)
                 self.msg_id += 1
                 LOGGER.info("Message sent")
+                self.pong = time.time()
 
             self._channel.close()
             connection.close()
@@ -105,10 +111,13 @@ class Burst_connection(ABC):
         id = header_frame.headers['id']
         if src not in self.comm_metrics:
             self.comm_metrics[src] = -1
-        if self.comm_metrics[src] < id:            
+        if self.comm_metrics[src] < id:
+            if sys.getsizeof(body):
+                self.size_buffer.append(sys.getsizeof(body))
             self.job_q.append((method_frame, header_frame, body))
             self.comm_metrics[src] = id
         self._channel.basic_ack(method_frame.delivery_tag)
+        self.ping = time.time()
             
                 
     def get_messages(self):
@@ -123,10 +132,14 @@ class Burst_connection(ABC):
         self._channel.close()
         connection.close()
 
+    def process_metrics(self):
+        pass
+
     def run(self):
         while True:
             self.publish_queue()
             self.get_messages()
             self.process_jobs()
+            self.process_metrics()
             time.sleep(2)
 

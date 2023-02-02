@@ -1,3 +1,8 @@
+import os
+from datetime import date
+import shutil
+import json
+
 class IIterable:
     def __init__(self, x, y, chunk_size) -> None:
         self.x = x
@@ -22,3 +27,16 @@ class Rule:
         self.action_handler = action_handler
     def execute(self, *args,**kwargs):
         self.action_handler(*self.rule_handler(*args, **kwargs))
+
+def directory_manager():
+    today = str(date.today())
+    dir_ = os.path.join("data", "logs", today)
+    if os.path.exists(dir_):
+        shutil.rmtree(dir_)
+    os.makedirs(dir_)
+    json_object = json.dumps([], indent=4)
+    with open(os.path.join(dir_,"training.json"), "w") as outfile:
+        outfile.write(json_object)
+    with open(os.path.join(dir_,"misc.json"), "w") as outfile:
+        outfile.write(json_object)
+    return dir_

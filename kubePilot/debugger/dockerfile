@@ -1,11 +1,12 @@
 FROM python:3.8-slim-buster
 RUN mkdir -p app/shared
-
 WORKDIR /app
 COPY shared/ shared/
 RUN ls shared/
+COPY consumer/ .
 COPY publisher/ .
+COPY debugger/ .
 RUN pip install -r shared/requirements.txt
+EXPOSE 3008
 
-EXPOSE 3001
-CMD ["python","pub.py"]
+CMD ["python", "debug_loop.py"]

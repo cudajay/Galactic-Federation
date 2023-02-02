@@ -16,6 +16,7 @@ class Pub_BC(Burst_connection):
         self.cfg = None
 
 def main():
+    print("entering")
     hostname = socket.gethostname()
     IPAddr = socket.gethostbyname(hostname)
     IPAddr = str(IPAddr) + str(random_with_N_digits(5))
