@@ -7,7 +7,6 @@ import time
 from bokeh.io import show, output_file
 from bokeh.plotting import figure
 
-@st.cache(suppress_st_warning=True)
 def grab_data():
     glb = glob.glob("data/logs/*")
     glb.sort(key=os.path.getmtime, reverse=True)
