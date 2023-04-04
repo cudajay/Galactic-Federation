@@ -102,6 +102,7 @@ class Base_Engine:
     def update_cfg_job(self, data):
         self.ch.cfg = loads(data)
         self.ch.model.compile(loss=self.ch.cfg['loss_metric'], optimizer=self.ch.cfg['optimizer'])
+        #TODO:make engine configurable
         self.ch.add_msg_to_q('agg', self.ch.QUEUE, self.ch.QUEUE, "update_data_req")
 
     def send_data_job(self, data):
@@ -140,8 +141,8 @@ class Base_Engine:
             assert (len(ids) == len(self.ch.comm_metrics))
             for d in self.ch.buffer[dct['step']]:
                 data[f"{d['id']}-step"] = d['step']
-                data[f"{d['id']}-loss"] = d['loss']
-                data[f"{d['id']}-val_loss"] = d['val_loss']
+                data[f"{d['id']}-loss"] = np.ndarray(1, dtype=np.float32,buffer=bytes.fromhex(d['loss']))[0]
+                data[f"{d['id']}-val_loss"] = np.ndarray(1, dtype=np.float32,buffer=bytes.fromhex(d['val_loss']))[0]
             m = self.ch.raw_model
             m.compile(loss=self.ch.cfg['loss_metric'], optimizer=self.ch.cfg['optimizer'])
             for i in range(len(m.trainable_variables)):
@@ -211,7 +212,9 @@ class GT_fedAvg_Engine(Base_Engine):
             LOGGER.warning(f"loss: {tl}")
         yhat = self.ch.model.predict(x_tst)
         score = mse(yhat, y_tst)
-        msg = {'id': self.ch.QUEUE, 'loss': tl.numpy(), 'val_loss': score.numpy(), 'step': self.ch.train_steps}
+        msg = {'id': self.ch.QUEUE, 'loss': tl.numpy().tobytes().hex(),
+               'val_loss': score.numpy().tobytes().hex(),
+               'step': self.ch.train_steps}
         for i in range(len(self.ch.model.trainable_variables)):
             msg[i] = self.ch.model.trainable_variables[i].numpy().tobytes().hex()
         self.ch.add_msg_to_q('agg', self.ch.QUEUE, dumps(msg), 'train_metrics')

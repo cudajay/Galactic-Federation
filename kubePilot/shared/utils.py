@@ -28,9 +28,9 @@ class Rule:
     def execute(self, *args,**kwargs):
         self.action_handler(*self.rule_handler(*args, **kwargs))
 
-def directory_manager():
+def directory_manager(cfg):
     today = str(date.today())
-    dir_ = os.path.join("data", "logs", today)
+    dir_ = os.path.join("data", "logs", f"{today}-{cfg['re']}")
     if os.path.exists(dir_):
         shutil.rmtree(dir_)
     os.makedirs(dir_)

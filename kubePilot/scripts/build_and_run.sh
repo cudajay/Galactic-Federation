@@ -1,4 +1,6 @@
 #!/bin/sh
+eval $(minikube docker-env)
+
 if [ "$1" = "1" ]; then
 echo "Debugging consumer";
 docker build -f debugger/dockerfile --no-cache -t cons1 .
@@ -12,7 +14,5 @@ echo "Normal Operation";
 docker build -f consumer/dockerfile --no-cache -t cons1 .
 docker build -f publisher/dockerfile --no-cache -t pub3 .
 fi
-eval $(minikube docker-env)
-
 
 sh scripts/redeploy.sh

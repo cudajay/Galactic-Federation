@@ -37,14 +37,14 @@ class Agg_BC(Burst_connection):
         super().__init__(writeto, consumefrom)
         self.raw_model = tf.keras.models.load_model(os.path.join('base-25.h5'))
         gb = glob.glob('data/25/train/*X.npy')
-        self.run_metrics_location = directory_manager()
+        with open('config.yaml', 'r') as file:
+            self.cfg = yaml.safe_load(file)
+        self.run_metrics_location = directory_manager(self.cfg)
         self.run_data = []
         # limited to data size right now
         self.data_files = [g for g in gb]
         shuffle(self.data_files)
         LOGGER.warning(str(self.data_files))
-        with open('config.yaml', 'r') as file:
-            self.cfg = yaml.safe_load(file)
         data = self.data_files.pop(0)
         data = data.replace("train", "test")
         x = np.load(data)
