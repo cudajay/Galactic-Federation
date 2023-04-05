@@ -36,12 +36,13 @@ class Agg_BC(Burst_connection):
     def __init__(self, writeto: str, consumefrom: str):
         super().__init__(writeto, consumefrom)
         self.raw_model = tf.keras.models.load_model(os.path.join('base-25.h5'))
-        gb = glob.glob('data/25/train/*X.npy')
         with open('config.yaml', 'r') as file:
             self.cfg = yaml.safe_load(file)
+        self.raw_model.compile(loss=self.cfg['loss_metric'], optimizer=self.cfg['optimizer'])     
         self.run_metrics_location = directory_manager(self.cfg)
         self.run_data = []
         # limited to data size right now
+        gb = glob.glob('data/25/train/*X.npy')
         self.data_files = [g for g in gb]
         shuffle(self.data_files)
         LOGGER.warning(str(self.data_files))
@@ -51,6 +52,7 @@ class Agg_BC(Burst_connection):
         y = np.load(data.replace("_X", "_y"))
         self.idata = IIterable(x, y, self.cfg['chunk_size'])
         self.round = 0
+        self.C = []
 
     def process_metrics(self):
         """

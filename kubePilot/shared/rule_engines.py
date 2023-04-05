@@ -8,6 +8,7 @@ import numpy as np
 import json
 import os
 from json import loads, dumps
+import random
 
 mse = MeanSquaredError()
 
@@ -117,7 +118,7 @@ class Base_Engine:
 
     def train_ok_send(self, data):
         self.ch.add_msg_to_q(data, self.ch.QUEUE, self.ch.QUEUE, 'train_ok')
-
+        
     def start_train(self, data):
         x, y = next(self.ch.idata)
         h = self.ch.model.fit(x, y, batch_size=64, epochs=8, validation_split=.2, verbose=True)
@@ -134,27 +135,23 @@ class Base_Engine:
             self.ch.buffer[dct['step']] = [dct]
         else:
             self.ch.buffer[dct['step']].append(dct)
-        if len(self.ch.buffer[dct['step']]) == len(self.ch.comm_metrics.keys()):
+        ids = set(map(lambda x: x['id'], self.ch.buffer[dct['step']]))
+        if (ids.intersection(self.ch.C) == self.ch.C) or (len(ids) == len(list(self.ch.comm_metrics.keys()))):
             data = {}
-            ids = list(map(lambda x: x['id'], self.ch.buffer[dct['step']]))
-            ids = np.unique(ids)
-            assert (len(ids) == len(self.ch.comm_metrics))
             for d in self.ch.buffer[dct['step']]:
                 data[f"{d['id']}-step"] = d['step']
                 data[f"{d['id']}-loss"] = float(np.ndarray(1, dtype=np.float32,buffer=bytes.fromhex(d['loss']))[0])
                 data[f"{d['id']}-val_loss"] = float(np.ndarray(1, dtype=np.float32,buffer=bytes.fromhex(d['val_loss']))[0])
-            m = self.ch.raw_model
-            m.compile(loss=self.ch.cfg['loss_metric'], optimizer=self.ch.cfg['optimizer'])
-            for i in range(len(m.trainable_variables)):
-                update = np.zeros(m.trainable_variables[i].numpy().shape)
+            for i in range(len(self.ch.raw_model.trainable_variables)):
+                update = np.zeros(self.ch.raw_model.trainable_variables[i].numpy().shape)
                 vals = list(map(lambda x: x[str(i)], self.ch.buffer[dct['step']]))
                 for v in vals:
-                    update += np.ndarray(m.trainable_variables[i].numpy().shape, dtype=np.float32,
+                    update += np.ndarray(self.ch.raw_model.trainable_variables[i].numpy().shape, dtype=np.float32,
                                          buffer=bytes.fromhex(v))
                 update = update / len(self.ch.comm_metrics)
-                m.trainable_variables[i].assign(update)
+                self.ch.raw_model.trainable_variables[i].assign(update)
             x, y = next(self.ch.idata)
-            yhat = m.predict(x)
+            yhat = self.ch.raw_model.predict(x)
             score = mse(yhat, y)
             data['global-loss'] = float(score.numpy())
             self.ch.run_data.append(data)
@@ -164,15 +161,20 @@ class Base_Engine:
 
             LOGGER.warning(f"TEST UPDATE: {score.numpy()}")
             weights = {}
-            for i in range(len(m.trainable_variables)):
-                weights[i] = m.trainable_variables[i].numpy().tobytes().hex()
+            for i in range(len(self.ch.raw_model.trainable_variables)):
+                weights[i] = self.ch.raw_model.trainable_variables[i].numpy().tobytes().hex()
             # send broadcast signal to update_weights
-            q_items = list(self.ch.comm_metrics.keys())
-            for prty in q_items:
-                self.ch.add_msg_to_q(prty, self.ch.QUEUE, dumps(weights), 'update_weights')
+            self.post_agg_processing(weights)
         else:
             self.ch.add_msg_to_q(dct['id'], self.ch.QUEUE, "standbye", 'info')
 
+    def post_agg_processing(self, weights):
+        self.ch.C = set(random.choices(list(self.ch.comm_metrics.keys()),
+                        k = int(self.ch.cfg['C']*len(self.ch.comm_metrics.keys()))))
+        q_items = list(self.ch.comm_metrics.keys())
+        for prty in q_items:
+            self.ch.add_msg_to_q(prty, self.ch.QUEUE, dumps(weights), 'update_weights')
+        
     def update_weights_job(self, data):
         dct = loads(data)
         for i in range(len(self.ch.model.trainable_variables)):

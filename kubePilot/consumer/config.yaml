@@ -6,3 +6,4 @@ dropout: 0.3
 lstm_batch_size: 64
 chunk_size: 196
 epochs: 8
+C: 0.7
