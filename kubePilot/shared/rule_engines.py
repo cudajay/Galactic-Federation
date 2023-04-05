@@ -141,8 +141,8 @@ class Base_Engine:
             assert (len(ids) == len(self.ch.comm_metrics))
             for d in self.ch.buffer[dct['step']]:
                 data[f"{d['id']}-step"] = d['step']
-                data[f"{d['id']}-loss"] = np.ndarray(1, dtype=np.float32,buffer=bytes.fromhex(d['loss']))[0]
-                data[f"{d['id']}-val_loss"] = np.ndarray(1, dtype=np.float32,buffer=bytes.fromhex(d['val_loss']))[0]
+                data[f"{d['id']}-loss"] = float(np.ndarray(1, dtype=np.float32,buffer=bytes.fromhex(d['loss']))[0])
+                data[f"{d['id']}-val_loss"] = float(np.ndarray(1, dtype=np.float32,buffer=bytes.fromhex(d['val_loss']))[0])
             m = self.ch.raw_model
             m.compile(loss=self.ch.cfg['loss_metric'], optimizer=self.ch.cfg['optimizer'])
             for i in range(len(m.trainable_variables)):
@@ -156,7 +156,7 @@ class Base_Engine:
             x, y = next(self.ch.idata)
             yhat = m.predict(x)
             score = mse(yhat, y)
-            data['global-loss'] = score.numpy()
+            data['global-loss'] = float(score.numpy())
             self.ch.run_data.append(data)
             save_file = open(os.path.join(self.ch.run_metrics_location, "training.json"), "w")
             json.dump(self.ch.run_data, save_file, indent=6)
