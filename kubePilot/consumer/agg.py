@@ -1,6 +1,7 @@
 import yaml
 import pdb
 from shared.burst_connection import Msg, Burst_connection
+from shared.rule_engines import Base_Engine, GT_fedAvg_Engine, GT_fedsgd_engine
 import os
 from json import dumps, loads
 import json
@@ -53,6 +54,10 @@ class Agg_BC(Burst_connection):
         self.idata = IIterable(x, y, self.cfg['chunk_size'])
         self.round = 0
         self.C = []
+        if self.cfg['re'] == 'fedAvg':
+            self.re = GT_fedAvg_Engine(self)
+        if self.cfg['re'] == 'fedSgd':
+            self.re = GT_fedsgd_engine(self)
 
     def process_metrics(self):
         """

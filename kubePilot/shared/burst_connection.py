@@ -65,7 +65,7 @@ class Burst_connection(ABC):
         self._channel.close()
         connection.close()
         LOGGER.warning("Init completed")
-        self.re = GT_fedAvg_Engine(self)
+        self.re = Base_Engine(self)
 
 
     def add_msg_to_q(self, to, frm, data, ct="info"):

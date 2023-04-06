@@ -103,7 +103,10 @@ class Base_Engine:
     def update_cfg_job(self, data):
         self.ch.cfg = loads(data)
         self.ch.model.compile(loss=self.ch.cfg['loss_metric'], optimizer=self.ch.cfg['optimizer'])
-        #TODO:make engine configurable
+        if self.ch.cfg['re'] == 'fedAvg':
+            self.ch.re = GT_fedAvg_Engine(self.ch)
+        if self.cfg['re'] == 'fedSgd':
+            self.ch.re = GT_fedsgd_engine(self.ch)
         self.ch.add_msg_to_q('agg', self.ch.QUEUE, self.ch.QUEUE, "update_data_req")
 
     def send_data_job(self, data):
@@ -140,6 +143,7 @@ class Base_Engine:
             for d in self.ch.buffer[dct['step']]:
                 data[f"{d['id']}-step"] = d['step']
                 data[f"{d['id']}-loss"] = float(np.ndarray(1, dtype=np.float32,buffer=bytes.fromhex(d['loss']))[0])
+
             for i in range(len(self.ch.raw_model.trainable_variables)):
                 update = np.zeros(self.ch.raw_model.trainable_variables[i].numpy().shape)
                 vals = list(map(lambda x: x[str(i)], self.ch.buffer[dct['step']]))
@@ -183,16 +187,11 @@ class Base_Engine:
 
 
 
-class GT_fedsgd_engine(Base_Engine):
-    def __int__(self, connection_handler):
-        super().__init__(connection_handler)
+
 class GT_fedAvg_Engine(Base_Engine):
     def __init__(self, connection_handler) -> None:
         super().__init__(connection_handler)
-        EPOCHS = 8
-        BS = 64
-        INIT_LR = 1e-3
-        self.opt = Adam(learning_rate=INIT_LR, decay=INIT_LR / EPOCHS)
+        self.opt = Adam(learning_rate=self.ch.cfg['lr'], decay=self.ch.cfg['lr'] / self.ch.cfg['epochs'])
     def init_data_job(self, data):
         LOGGER.warning(f"initing {data} with super")
         x = np.load(data)
@@ -201,17 +200,43 @@ class GT_fedAvg_Engine(Base_Engine):
         self.ch.add_msg_to_q('agg', self.ch.QUEUE, self.ch.QUEUE, 'train_req')
     def start_train(self, data):
         x, y = next(self.ch.idata)
+        tl = 0
+        for _ in range(self.ch.cfg['epochs']):
+            tl = self.step(x, y)
+            LOGGER.warning(f"loss: {tl}")
+        msg = {'id': self.ch.QUEUE, 'loss': tl.numpy().tobytes().hex(),
+               'step': self.ch.train_steps}
+        for i in range(len(self.ch.model.trainable_variables)):
+            msg[i] = self.ch.model.trainable_variables[i].numpy().tobytes().hex()
+        self.ch.add_msg_to_q('agg', self.ch.QUEUE, dumps(msg), 'train_metrics')
+        self.ch.train_steps += 1
+
+    def step(self, X, y):
         loss = None
         with tf.GradientTape() as tape:
             pred = self.ch.model(X)
             loss = mse(y, pred)
 
         grads = tape.gradient(loss, self.ch.model.trainable_variables)
+        self.opt.apply_gradients(zip(grads, self.ch.model.trainable_variables))
+        return loss
+    
+class GT_fedsgd_engine(GT_fedAvg_Engine):
+    def __int__(self, connection_handler):
+        super().__init__(connection_handler)
+
+    def start_train(self, data):
+        x, y = next(self.ch.idata)
+        loss = None
+        with tf.GradientTape() as tape:
+            pred = self.ch.model(x)
+            loss = mse(y, pred)
+
+        grads = tape.gradient(loss, self.ch.model.trainable_variables)
         LOGGER.warning(f"loss: {loss}")
-        msg = {'id': self.ch.QUEUE, 'loss': float(loss),
+        msg = {'id': self.ch.QUEUE, 'loss': loss.numpy().tobytes().hex(),
                'step': self.ch.train_steps}
         for i in range(len(self.ch.model.trainable_variables)):
             msg[i] = grads[i].numpy().tobytes().hex()
         self.ch.add_msg_to_q('agg', self.ch.QUEUE, dumps(msg), 'train_metrics')
         self.ch.train_steps += 1
-
