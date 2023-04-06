@@ -2,6 +2,7 @@ import os
 from datetime import date
 import shutil
 import json
+import yaml
 
 class IIterable:
     def __init__(self, x, y, chunk_size) -> None:
@@ -34,6 +35,9 @@ def directory_manager(cfg):
     if os.path.exists(dir_):
         shutil.rmtree(dir_)
     os.makedirs(dir_)
+    file=open(os.path.join(dir_, "config.yaml"),"w")
+    yaml.dump(cfg,file)
+    file.close()
     json_object = json.dumps([], indent=4)
     with open(os.path.join(dir_,"training.json"), "w") as outfile:
         outfile.write(json_object)

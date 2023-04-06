@@ -17,7 +17,7 @@ spec:
   selector:
     matchLabels:
       app: pub3
-  replicas: 8
+  replicas: 15
   template:
     metadata:
       labels:
