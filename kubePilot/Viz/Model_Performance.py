@@ -24,7 +24,5 @@ try:
     chart_data = chart_data.drop('global-loss', axis=1)
     st.header("Training Loss across Federation")
     st.line_chart(chart_data.filter(regex=("-loss")))
-    st.header("Validation Loss across Federation")
-    st.line_chart(chart_data.filter(regex=("-val")))
 except:
     st.header("Data is not yet ready")

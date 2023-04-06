@@ -121,9 +121,8 @@ class Base_Engine:
         
     def start_train(self, data):
         x, y = next(self.ch.idata)
-        h = self.ch.model.fit(x, y, batch_size=64, epochs=8, validation_split=.2, verbose=True)
-        msg = {'id': self.ch.QUEUE, 'loss': h.history['loss'][-1], 'val_loss': h.history['val_loss'][-1],
-               'step': self.ch.train_steps}
+        h = self.ch.model.fit(x, y, batch_size=64, epochs=8, verbose=True)
+        msg = {'id': self.ch.QUEUE, 'loss': h.history['loss'][-1], 'step': self.ch.train_steps}
         for i in range(len(self.ch.model.trainable_variables)):
             msg[i] = self.ch.model.trainable_variables[i].numpy().tobytes().hex()
         self.ch.add_msg_to_q('agg', self.ch.QUEUE, dumps(msg), 'train_metrics')
@@ -141,7 +140,6 @@ class Base_Engine:
             for d in self.ch.buffer[dct['step']]:
                 data[f"{d['id']}-step"] = d['step']
                 data[f"{d['id']}-loss"] = float(np.ndarray(1, dtype=np.float32,buffer=bytes.fromhex(d['loss']))[0])
-                data[f"{d['id']}-val_loss"] = float(np.ndarray(1, dtype=np.float32,buffer=bytes.fromhex(d['val_loss']))[0])
             for i in range(len(self.ch.raw_model.trainable_variables)):
                 update = np.zeros(self.ch.raw_model.trainable_variables[i].numpy().shape)
                 vals = list(map(lambda x: x[str(i)], self.ch.buffer[dct['step']]))
@@ -203,31 +201,17 @@ class GT_fedAvg_Engine(Base_Engine):
         self.ch.add_msg_to_q('agg', self.ch.QUEUE, self.ch.QUEUE, 'train_req')
     def start_train(self, data):
         x, y = next(self.ch.idata)
-        cut = int(x.shape[0] * .8)
-        x_tr = x[0:cut, :, :]
-        y_tr = y[0:cut, :]
-        x_tst = x[cut:-1, :, :]
-        y_tst = y[cut:-1, :]
-        tl = 0
-        for _ in range(8):
-            tl = self.step(x_tr, y_tr)
-            LOGGER.warning(f"loss: {tl}")
-        yhat = self.ch.model.predict(x_tst)
-        score = mse(yhat, y_tst)
-        msg = {'id': self.ch.QUEUE, 'loss': tl.numpy().tobytes().hex(),
-               'val_loss': score.numpy().tobytes().hex(),
-               'step': self.ch.train_steps}
-        for i in range(len(self.ch.model.trainable_variables)):
-            msg[i] = self.ch.model.trainable_variables[i].numpy().tobytes().hex()
-        self.ch.add_msg_to_q('agg', self.ch.QUEUE, dumps(msg), 'train_metrics')
-        self.ch.train_steps += 1
-
-    def step(self, X, y):
         loss = None
         with tf.GradientTape() as tape:
             pred = self.ch.model(X)
             loss = mse(y, pred)
 
         grads = tape.gradient(loss, self.ch.model.trainable_variables)
-        self.opt.apply_gradients(zip(grads, self.ch.model.trainable_variables))
-        return loss
+        LOGGER.warning(f"loss: {loss}")
+        msg = {'id': self.ch.QUEUE, 'loss': float(loss),
+               'step': self.ch.train_steps}
+        for i in range(len(self.ch.model.trainable_variables)):
+            msg[i] = grads[i].numpy().tobytes().hex()
+        self.ch.add_msg_to_q('agg', self.ch.QUEUE, dumps(msg), 'train_metrics')
+        self.ch.train_steps += 1
+
