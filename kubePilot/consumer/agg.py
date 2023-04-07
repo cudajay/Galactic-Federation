@@ -58,6 +58,9 @@ class Agg_BC(Burst_connection):
             self.re = GT_fedAvg_Engine(self)
         if self.cfg['re'] == 'fedSgd':
             self.re = GT_fedsgd_engine(self)
+            
+        self.g_min = np.Inf
+        self.patience_test = 0
 
     def process_metrics(self):
         """

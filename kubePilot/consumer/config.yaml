@@ -9,3 +9,5 @@ chunk_size: 196
 epochs: 8
 C: 0.7
 lr: 0.001
+ntest: 3
+patience: 25

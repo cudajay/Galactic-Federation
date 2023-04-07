@@ -105,7 +105,7 @@ class Base_Engine:
         self.ch.model.compile(loss=self.ch.cfg['loss_metric'], optimizer=self.ch.cfg['optimizer'])
         if self.ch.cfg['re'] == 'fedAvg':
             self.ch.re = GT_fedAvg_Engine(self.ch)
-        if self.cfg['re'] == 'fedSgd':
+        if self.ch.cfg['re'] == 'fedSgd':
             self.ch.re = GT_fedsgd_engine(self.ch)
         self.ch.add_msg_to_q('agg', self.ch.QUEUE, self.ch.QUEUE, "update_data_req")
 
@@ -156,6 +156,12 @@ class Base_Engine:
             yhat = self.ch.raw_model.predict(x)
             score = mse(yhat, y)
             data['global-loss'] = float(score.numpy())
+            if data['global-loss'] < self.ch.g_min:
+                self.ch.raw_model.save(os.path.join(self.ch.run_metrics_location, "model.h5"))
+                self.ch.g_min = data['global-loss']
+                self.ch.patience_test = 0
+            else:
+                self.ch.patience_test += 1
             self.ch.run_data.append(data)
             save_file = open(os.path.join(self.ch.run_metrics_location, "training.json"), "w")
             json.dump(self.ch.run_data, save_file, indent=6)
@@ -165,8 +171,11 @@ class Base_Engine:
             weights = {}
             for i in range(len(self.ch.raw_model.trainable_variables)):
                 weights[i] = self.ch.raw_model.trainable_variables[i].numpy().tobytes().hex()
-            # send broadcast signal to update_weights
-            self.post_agg_processing(weights)
+            # send broadcast signal to update_weights as long patience is within tolerance
+            if self.ch.patience_test < self.ch.cfg['patience']:
+                self.post_agg_processing(weights)
+            else:
+                print("Patience exceeded, experiment terminated!*100")
         else:
             self.ch.add_msg_to_q(dct['id'], self.ch.QUEUE, "standbye", 'info')
 
