@@ -43,6 +43,7 @@ class Burst_connection(ABC):
         self.ping = time.time()
         self.pong = time.time()
         self.size_buffer = []
+        self.comms_enabled = True
         
         hst = os.getenv("RABBIT_HOST")
         prt = os.getenv("RABBIT_PORT")
@@ -137,9 +138,10 @@ class Burst_connection(ABC):
 
     def run(self):
         while True:
-            self.publish_queue()
-            self.get_messages()
-            self.process_jobs()
-            self.process_metrics()
-            time.sleep(2)
+            if self.comms_enabled:
+                self.publish_queue()
+                self.get_messages()
+                self.process_jobs()
+                self.process_metrics()
+                time.sleep(2)
 

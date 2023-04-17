@@ -19,8 +19,10 @@ def grab_data():
     return pd.read_json(os.path.join(g,"training.json"))
 try:
     chart_data = grab_data()
+    chart_data['target_loss'] =  0.07
     st.header("Global Loss")
-    st.line_chart(chart_data['global-loss'])
+    plt1_data = chart_data.loc[:,['global-loss', 'target_loss']]
+    st.line_chart(plt1_data)
     chart_data = chart_data.drop('global-loss', axis=1)
     st.header("Training Loss across Federation")
     st.line_chart(chart_data.filter(regex=("-loss")))

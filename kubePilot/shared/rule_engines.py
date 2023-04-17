@@ -176,6 +176,7 @@ class Base_Engine:
                 self.post_agg_processing(weights)
             else:
                 print("Patience exceeded, experiment terminated!*100")
+                self.ch.comms_enabled = False
         else:
             self.ch.add_msg_to_q(dct['id'], self.ch.QUEUE, "standbye", 'info')
 
