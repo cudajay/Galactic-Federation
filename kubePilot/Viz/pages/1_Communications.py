@@ -4,10 +4,12 @@ import os
 import glob
 import numpy as np
 import time
+
 from bokeh.io import show, output_file
 from bokeh.plotting import figure
 
 from streamlit_autorefresh import st_autorefresh
+
 
 # Run the autorefresh about every 2000 milliseconds (2 seconds) and stop
 # after it's been refreshed 100 times.
@@ -21,6 +23,8 @@ def grab_data():
 
 st.title("Communications")
 chart_data = grab_data()
+lu = chart_data["last_updated"].values[-1]
+st.subheader(f"Last updated on: {lu} ")
 hist, edges = np.histogram(chart_data['latency'], density=True, bins=25)
 p = figure()
 p.quad(top=hist, bottom=0, left=edges[:-1], right=edges[1:], line_color="white")
@@ -29,6 +33,16 @@ st.bokeh_chart(p, use_container_width=True)
 hist2, edges2 = np.histogram(chart_data['avg_msg_size'], density=True, bins=25)
 p2 = figure()
 p2.quad(top=hist2, bottom=0, left=edges2[:-1], right=edges2[1:], line_color="white")
-st.header("Average Message Size")
+st.header("Message Size")
 st.bokeh_chart(p2, use_container_width=True)
 
+#hist3, edges3 = np.histogram(chart_data['n_messages'], density=True, bins=25)
+p3 = figure()
+p3.line(list(chart_data['n_messages'].index), chart_data['n_messages'])
+st.header("Number of Messages")
+st.bokeh_chart(p3, use_container_width=True)
+
+p4 = figure()
+p4.line(list(chart_data['killed'].index), chart_data['killed'])
+st.header("Communications Enabled")
+st.bokeh_chart(p4, use_container_width=True)

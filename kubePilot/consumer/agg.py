@@ -70,7 +70,8 @@ class Agg_BC(Burst_connection):
             json_object = None
             with open(os.path.join(self.run_metrics_location, "misc.json"), 'r') as openfile:
                 json_object = json.load(openfile)
-            dict_ = {"latency": self.pong - self.ping, "avg_msg_size": np.abs(np.mean(self.size_buffer))}
+            dict_ = {"latency": np.abs(self.pong - self.ping), "avg_msg_size": np.mean(self.size_buffer), 'n_messages': self.msg_id * 2, 'killed': self.comms_enabled,
+                     'last_updated': str(datetime.datetime.now())}
             json_object.append(dict_)
             self.size_buffer = []
             save_file = open(os.path.join(self.run_metrics_location, "misc.json"), "w")
