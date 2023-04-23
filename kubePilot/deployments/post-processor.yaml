@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pp
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: test-app-pp
+  template:
+    metadata:
+      labels:
+        app: test-app-pp
+    spec:
+      containers:
+      - name: pp
+        image: pp
+        imagePullPolicy: Never
+        volumeMounts:
+          - name: hostvol
+            mountPath: /app/data
+        resources:
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
+        ports:
+        - containerPort: 5000
+      volumes:
+        - name: hostvol
+          hostPath:
+            path: /home/docker/dummy
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: test-pp
+spec:
+  type: LoadBalancer
+  selector:
+    app: test-app-pp
+  ports:
+    - protocol: "TCP"
+      port: 8000
+      targetPort: 5000

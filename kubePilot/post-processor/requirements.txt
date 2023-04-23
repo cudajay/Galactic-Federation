@@ -1,0 +1,4 @@
+pandas
+numpy
+tensorflow
+pyYAML ==6.0

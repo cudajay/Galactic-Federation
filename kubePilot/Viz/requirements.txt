@@ -1,3 +1,5 @@
 streamlit
 streamlit_autorefresh
 bokeh == 2.4.3
+matplotlib
+tensorflow

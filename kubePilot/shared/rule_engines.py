@@ -250,3 +250,22 @@ class GT_fedsgd_engine(GT_fedAvg_Engine):
             msg[i] = grads[i].numpy().tobytes().hex()
         self.ch.add_msg_to_q('agg', self.ch.QUEUE, dumps(msg), 'train_metrics')
         self.ch.train_steps += 1
+        
+        
+'''
+# Sparse coding method
+from sklearn.decomposition import DictionaryLearning
+
+# create a dictionary learning object
+dl = DictionaryLearning(n_components=50, alpha=1, max_iter=1000)
+
+# fit the dictionary to the data
+dl.fit(X)
+
+# use the learned dictionary to encode the data
+Z = dl.transform(X)
+
+# use the learned dictionary to decode the data
+X_reconstructed = dl.inverse_transform(Z)
+
+'''

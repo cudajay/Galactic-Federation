@@ -11,3 +11,8 @@ C: 0.7
 lr: 0.001
 ntest: 3
 patience: 50
+batch_size: 70
+l_s: 250
+npreds: 10
+window_size: 30
+smoothing_perc: 0.05
