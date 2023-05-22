@@ -65,14 +65,40 @@ def grab_data():
         cfg = yaml.safe_load(file)
     return (g, cfg, tf.keras.models.load_model(os.path.join(g, "model.h5")))
 
-glb = glob.glob("data/25/test/*X.npy")
-choice = random.choice(glb)
+
+wrk_dir, cfg, model = grab_data()
+dir_path = os.path.join(wrk_dir, "post_processing")
+
+# Check if the directory exists
+filename = os.path.join(dir_path, 'to_test.yaml')   
+if not os.path.exists(dir_path):
+    # Create the directory
+    os.makedirs(dir_path)
+    glb = glob.glob("data/25/test/*X.npy")
+    with open(filename, 'w') as file:
+        yaml.dump(glb, file)
+    print(f'Created directory: {dir_path}')
+    
+
+with open(filename, 'r') as file:
+    l = yaml.load(file, Loader=yaml.FullLoader)
+if not l:
+    print("No more test sets available")
+    #TODO: find cleaner way to exit container loop
+    while True:
+        x = 1
+with open(filename, 'w') as file:
+    yaml.dump(l, file)
+choice = l.pop()
 x = np.load(choice)
 y = np.load(choice.replace("X", "y"))
 choice = choice.split("/")[-1].split("_")[0]
+dir_path = os.path.join(dir_path, choice)
+os.makedirs(dir_path)
+print(f'Created directory: {dir_path}')
 
 while True:
-    wrk_dir, cfg, model = grab_data()
+    
     yhat = batch_predict(x,y,model, cfg)
     batch_size = cfg["batch_size"]
     window_size = cfg["window_size"]
@@ -83,7 +109,7 @@ while True:
                     zip(yhat, y)])
     e_s = pd.DataFrame(e).ewm(span=smoothing_window).mean().values.flatten()
     # Calculate the moving average and standard deviation
-    window_size = 800
+    window_size = 500
     rolling_mean = np.convolve(e_s, np.ones(window_size)/window_size, mode='same')
     rolling_std = np.sqrt(np.convolve(np.square(e_s - rolling_mean), np.ones(window_size)/window_size, mode='same'))
 
@@ -93,34 +119,8 @@ while True:
     # Detect anomalies by comparing each data point to the threshold
     anomaly_mask = e_s> threshold
     anomaly_indices = np.where(anomaly_mask)
-    # Define the directory path
-    dir_path = os.path.join(wrk_dir, "post_processing")
 
-    # Check if the directory exists
-    if not os.path.exists(dir_path):
-        # Create the directory
-        os.makedirs(dir_path)
-        print(f'Created directory: {dir_path}')
-    else:
-        print(f'Directory already exists: {dir_path}')
-    # Check if the directory exists
-    if not os.path.exists(dir_path):
-        # Create the directory
-        os.makedirs(dir_path)
-        print(f'Created directory: {dir_path}')
-    else:
-        print(f'Directory already exists: {dir_path}')
-
-    dir_path = os.path.join(dir_path, choice)
-
-    # Check if the directory exists
-    if not os.path.exists(dir_path):
-        # Create the directory
-        os.makedirs(dir_path)
-        print(f'Created directory: {dir_path}')
-    else:
-        print(f'Directory already exists: {dir_path}')
-
+    np.save(os.path.join(dir_path, "yhat.npy"), yhat)
     np.save(os.path.join(dir_path, "e_s.npy"), e_s)
     np.save(os.path.join(dir_path, "rolling_mean.npy"), rolling_mean)
     np.save(os.path.join(dir_path, "threshold_multiplier.npy"), threshold_multiplier)
@@ -149,9 +149,9 @@ while True:
 
     fn = anomaly_indices[0].shape[0] - (tp+fp)
     out = {}
-    out['precision'] = tp/(tp+fp)
+    out['precision'] = tp/(tp+fp + 0.000001)
     out["recall"] = tp/(tp + fn + .0000001)
-    out["f1"] = (2*out["precision"]*out["recall"])/(out["precision"+"recall"])
+    out["f1"] = (2*out["precision"]*out["recall"])/(out["precision"]+out["recall"] + .0000001)
 
 
     with open(os.path.join(dir_path, "metrics.yaml"), 'w') as f:

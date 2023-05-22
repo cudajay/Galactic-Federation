@@ -268,4 +268,67 @@ Z = dl.transform(X)
 # use the learned dictionary to decode the data
 X_reconstructed = dl.inverse_transform(Z)
 
+import numpy as np
+
+def dictionary_learning(X, n_components, n_iterations, learning_rate):
+    n_samples, n_features = X.shape
+
+    # Initialize the dictionary
+    D = np.random.randn(n_features, n_components)
+
+    # Iterate until convergence
+    for i in range(n_iterations):
+        # Compute the sparse codes using L1-minimization
+        codes = l1_minimization(X, D)
+
+        # Compute the dictionary update using gradient descent
+        D_grad = np.dot(X.T, codes)
+        D -= learning_rate * D_grad
+
+    return D
+
+def l1_minimization(X, D):
+    # Compute the sparse codes using L1-minimization
+    codes = np.zeros((D.shape[1], X.shape[1]))
+    for i in range(X.shape[1]):
+        codes[:, i] = l1_minimization_single(X[:, i], D)
+
+    return codes
+
+def l1_minimization_single(x, D):
+    alpha = 0.1  # L1 regularization parameter
+    max_iter = 100  # Maximum number of iterations
+
+    # Initialize the sparse code
+    z = np.zeros(D.shape[1])
+
+    # Iterate until convergence
+    for i in range(max_iter):
+        # Compute the gradient
+        grad = np.dot(D.T, np.dot(D, z) - x) + alpha * np.sign(z)
+
+        # Update the sparse code
+        z -= grad * alpha
+
+        # Project onto the L1 ball
+        z = project_l1_ball(z)
+
+    return z
+
+def project_l1_ball(x):
+    # Project x onto the L1 ball
+    u = np.abs(x)
+    s = np.sum(u)
+    if s <= 1:
+        return x
+    else:
+        rho = 1 / np.sqrt(len(x))
+        w = (s - 1) / len(x)
+        return np.sign(x) * np.maximum(u - rho * (u - w), 0)
+
+# Example usage
+X = np.random.randn(100, 50)
+D = dictionary_learning(X, n_components=10, n_iterations=100, learning_rate=0.01)
+
+
 '''

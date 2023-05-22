@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: pp
 spec:
-  replicas: 3
+  replicas: 60
   selector:
     matchLabels:
       app: test-app-pp

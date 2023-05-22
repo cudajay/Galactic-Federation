@@ -19,7 +19,7 @@ def grab_data():
     return (cfg, tf.keras.models.load_model(os.path.join(g, "model.h5")))
 # Run the autorefresh about every 2000 milliseconds (2 seconds) and stop
 # after it's been refreshed 100 times.
-#count = st_autorefresh(interval=90000, limit=100000, key="fizzbuzzcounter")
+count = st_autorefresh(interval=90000, limit=100000, key="fizzbuzzcounter")
 
 st.title("Anomaly Detection")
 """
