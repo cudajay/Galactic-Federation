@@ -4,7 +4,7 @@ import logging
 from pika.exchange_type import ExchangeType
 import functools
 import time
-from shared.rule_engines import Base_Engine, GT_fedAvg_Engine
+from rule_engines import Base_Engine, GT_fedAvg_Engine
 import sys
 from abc import ABC, abstractmethod
 

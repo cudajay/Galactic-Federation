@@ -1,12 +1,12 @@
 loss_metric: 'mse'
 arch: 'lstm'
-re: 'fedSgd'
+re: 'fedAvg'
 optimizer: 'adam'
 validation_split: 0.2
 dropout: 0.3
 lstm_batch_size: 64
 chunk_size: 196
-epochs: 8
+epochs: 3
 C: 0.7
 lr: 0.001
 ntest: 3

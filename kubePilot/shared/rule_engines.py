@@ -1,5 +1,5 @@
 import logging
-from shared.utils import IIterable, Rule
+from utils import IIterable, Rule
 import tensorflow as tf
 from tensorflow.keras.models import model_from_json
 from tensorflow.keras.losses import MeanSquaredError

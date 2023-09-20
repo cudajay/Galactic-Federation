@@ -2,10 +2,10 @@ FROM python:3.8-slim-buster
 RUN mkdir -p app/shared
 
 WORKDIR /app
-COPY shared/ shared/
+COPY shared/requirements.txt/ shared/
 RUN ls shared/
-COPY consumer/ .
+
 RUN pip install -r shared/requirements.txt
 
 EXPOSE 3003
-CMD ["python","agg.py"]
+CMD ["python","/app/src/consumer/agg.py"]

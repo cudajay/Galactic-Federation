@@ -28,8 +28,10 @@ spec:
         image: cons1
         imagePullPolicy: Never
         volumeMounts:
-        - name: hostvol
+        - name: hostvol1
           mountPath: /app/data
+        - name: hostvol2
+          mountPath: /app/src
         ports:
         - containerPort: 80
         env:
@@ -52,9 +54,12 @@ spec:
               name: rabbitmq-consumer
               key: RABBIT_PASSWORD
       volumes:
-      - name: hostvol
+      - name: hostvol1
         hostPath:
           path: /home/docker/dummy
+      - name: hostvol2
+        hostPath:
+          path: /home/docker/src
 ---
 apiVersion: v1
 kind: Service

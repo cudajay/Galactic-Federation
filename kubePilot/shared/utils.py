@@ -31,7 +31,7 @@ class Rule:
 
 def directory_manager(cfg):
     today = str(date.today())
-    dir_ = os.path.join("data", "logs", f"{today}-{cfg['arch']}-{cfg['re']}")
+    dir_ = os.path.join("app","data", "logs", f"{today}-{cfg['arch']}-{cfg['re']}")
     if os.path.exists(dir_):
         shutil.rmtree(dir_)
     os.makedirs(dir_)

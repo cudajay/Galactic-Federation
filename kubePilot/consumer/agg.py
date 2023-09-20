@@ -1,7 +1,9 @@
+import sys
+sys.path.append('/app/src/shared/')
 import yaml
 import pdb
-from shared.burst_connection import Msg, Burst_connection
-from shared.rule_engines import Base_Engine, GT_fedAvg_Engine, GT_fedsgd_engine
+from burst_connection import Msg, Burst_connection
+from rule_engines import Base_Engine, GT_fedAvg_Engine, GT_fedsgd_engine
 import os
 from json import dumps, loads
 import json
@@ -11,11 +13,10 @@ import numpy as np
 import glob
 from json import JSONEncoder
 import logging
-from shared.utils import IIterable, directory_manager
+from utils import IIterable, directory_manager
 from random import shuffle
 import datetime
 from random import randint
-
 
 def random_with_N_digits(n):
     """
@@ -36,14 +37,14 @@ LOGGER = logging.getLogger(__name__)
 class Agg_BC(Burst_connection):
     def __init__(self, writeto: str, consumefrom: str):
         super().__init__(writeto, consumefrom)
-        self.raw_model = tf.keras.models.load_model(os.path.join('base-25.h5'))
-        with open('config.yaml', 'r') as file:
+        self.raw_model = tf.keras.models.load_model(os.path.join("/app","src", "consumer", 'base-25.h5'))
+        with open('/app/src/consumer/config.yaml', 'r') as file:
             self.cfg = yaml.safe_load(file)
         self.raw_model.compile(loss=self.cfg['loss_metric'], optimizer=self.cfg['optimizer'])     
         self.run_metrics_location = directory_manager(self.cfg)
         self.run_data = []
         # limited to data size right now
-        gb = glob.glob('data/25/train/*X.npy')
+        gb = glob.glob('/app/data/25/train/*X.npy')
         self.data_files = [g for g in gb]
         shuffle(self.data_files)
         LOGGER.warning(str(self.data_files))

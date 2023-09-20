@@ -1,7 +1,9 @@
+import sys
+sys.path.append('/app/src/shared/')
 import os
 import pdb
 import socket
-from shared.burst_connection import Msg, Burst_connection
+from burst_connection import Msg, Burst_connection
 from random import randint
 
 def random_with_N_digits(n):
