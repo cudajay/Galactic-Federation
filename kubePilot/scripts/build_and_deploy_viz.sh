@@ -9,6 +9,6 @@ docker build -t viz .
 cd ..
 kubectl -n rabbits create -f deployments/viz.yaml
 minikube -n rabbits service test-viz
-sleep 3s
+sleep 10s
 kubectl -n rabbits port-forward service/test-viz 8000:8000
 

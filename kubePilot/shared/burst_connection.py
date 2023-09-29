@@ -78,8 +78,8 @@ class Burst_connection(ABC):
         while self.job_q:
             try:
                 self.re.exec(*self.job_q.pop(0))
-            except:
-                print("Trying null value error...")
+            except Exception as e:
+                print(f"Unrecognized Job attempted, trying null value error... {str(e)}")
 
     def publish_queue(self):
         if self.msg_q:
@@ -137,11 +137,10 @@ class Burst_connection(ABC):
         pass
 
     def run(self):
-        while True:
-            if self.comms_enabled:
-                self.publish_queue()
-                self.get_messages()
-                self.process_jobs()
-                self.process_metrics()
-                time.sleep(2)
+        while self.comms_enabled:
+            self.publish_queue()
+            self.get_messages()
+            self.process_jobs()
+            self.process_metrics()
+            time.sleep(2)
 

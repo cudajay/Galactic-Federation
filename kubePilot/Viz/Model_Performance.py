@@ -15,6 +15,9 @@ def grab_data():
     glb = glob.glob("data/logs/*")
     glb.sort(key=os.path.getmtime, reverse=True)
     g = glb[0]
+    glb = glob.glob(g +"/*")
+    glb.sort(key=os.path.getmtime, reverse=True)
+    g = glb[0]
     st.header(g, anchor=None)
     return pd.read_json(os.path.join(g,"training.json"))
 try:

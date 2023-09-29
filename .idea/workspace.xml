@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="f569f039-2d64-4284-9ff4-76e2e6b2fed3" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/kubePilot/Journal.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/kubePilot/scripts/mount_data.sh" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/kubePilot/scripts/start_rabbits_dash.sh" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/leaf_eda/trans.h5" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/kubePilot/consumer/agg.py" beforeDir="false" afterPath="$PROJECT_DIR$/kubePilot/consumer/agg.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/kubePilot/consumer/config.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/kubePilot/consumer/config.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/kubePilot/shared/rule_engines.py" beforeDir="false" afterPath="$PROJECT_DIR$/kubePilot/shared/rule_engines.py" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Jupyter Notebook" />
+      </list>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="MarkdownSettingsMigration">
+    <option name="stateVersion" value="1" />
+  </component>
+  <component name="ProjectId" id="2KEuTfkCg19hiLv34aS5gF38Urs" />
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true">
+    <ConfirmationsSetting value="2" id="Add" />
+  </component>
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ASKED_ADD_EXTERNAL_FILES&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;WebServerToolWindowFactoryState&quot;: &quot;false&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/home/jmeow/git/Galactic-Federation/venv/bin/python3.8&quot;,
+    &quot;run.code.analysis.last.selected.profile&quot;: &quot;aDefault&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;org.jetbrains.plugins.notebooks.jupyter.connections.configuration.JupyterServerConfigurable&quot;
+  }
+}</component>
+  <component name="RunManager">
+    <configuration name="Unnamed" type="PythonConfigurationType" factoryName="Python" nameIsGenerated="true">
+      <module name="Galactic-Federation" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="$USER_HOME$/miniconda3/envs/meow2/bin/python" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="f569f039-2d64-4284-9ff4-76e2e6b2fed3" name="Changes" comment="" />
+      <created>1673552076363</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1673552076363</updated>
+      <workItem from="1673552084535" duration="826000" />
+      <workItem from="1673576334306" duration="1257000" />
+      <workItem from="1674783858665" duration="4626000" />
+      <workItem from="1674874355962" duration="3401000" />
+      <workItem from="1675136741304" duration="1764000" />
+      <workItem from="1675309408330" duration="1444000" />
+      <workItem from="1675364026751" duration="5773000" />
+      <workItem from="1677773805067" duration="91000" />
+      <workItem from="1677774726590" duration="5484000" />
+      <workItem from="1677786410849" duration="382000" />
+      <workItem from="1677788664126" duration="947000" />
+      <workItem from="1680841152867" duration="65000" />
+    </task>
+    <task id="LOCAL-00001" summary="viz with static data">
+      <created>1674790742781</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1674790742781</updated>
+    </task>
+    <task id="LOCAL-00002" summary="and docker debugger script">
+      <created>1675370547116</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1675370547116</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="VcsManagerConfiguration">
+    <option name="ADD_EXTERNAL_FILES_SILENTLY" value="true" />
+    <MESSAGE value="viz with static data" />
+    <MESSAGE value="and docker debugger script" />
+    <option name="LAST_COMMIT_MESSAGE" value="and docker debugger script" />
+  </component>
+</project>

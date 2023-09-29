@@ -69,3 +69,4 @@ pandas
 gunicorn
 flask
 dash-auth==1.3.2
+optuna

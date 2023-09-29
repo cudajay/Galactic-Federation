@@ -4,7 +4,7 @@ RUN mkdir -p app/shared
 WORKDIR /app
 COPY shared/requirements.txt/ shared/
 RUN ls shared/
-
+RUN pip install optuna
 RUN pip install -r shared/requirements.txt
 
 EXPOSE 3003

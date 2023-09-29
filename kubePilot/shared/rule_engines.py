@@ -81,6 +81,11 @@ class Base_Engine:
             if header_frame.content_type == 'update_weights':
                 LOGGER.info(f"new weights added ")
                 return (self.update_weights_job, body)
+            if header_frame.content_type == 'reset':
+                LOGGER.info(f"federation resetted ")
+                return (self.reset, body)
+            if header_frame.content_type == "info":
+                return( self.null_job, body)
         else:
             return (self.null_job, [])
 
@@ -95,7 +100,7 @@ class Base_Engine:
 
     def update_model_job(self, data):
         self.ch.model = model_from_json(data)
-        self.ch.add_msg_to_q('agg', self.ch.QUEUE, self.ch.QUEUE, 'update_config_req')
+        self.ch.add_msg_to_q(self.ch.wt, self.ch.QUEUE, self.ch.QUEUE, 'update_config_req')
 
     def send_update_cfg_job(self, data):
         self.ch.add_msg_to_q(data, self.ch.QUEUE, dumps(self.ch.cfg), 'update_config')
@@ -107,7 +112,7 @@ class Base_Engine:
             self.ch.re = GT_fedAvg_Engine(self.ch)
         if self.ch.cfg['re'] == 'fedSgd':
             self.ch.re = GT_fedsgd_engine(self.ch)
-        self.ch.add_msg_to_q('agg', self.ch.QUEUE, self.ch.QUEUE, "update_data_req")
+        self.ch.add_msg_to_q(self.ch.wt, self.ch.QUEUE, self.ch.QUEUE, "update_data_req")
 
     def send_data_job(self, data):
         self.ch.add_msg_to_q(data, self.ch.QUEUE, self.ch.data_files.pop(0), 'init_data')
@@ -117,7 +122,7 @@ class Base_Engine:
         x = np.load(data)
         y = np.load(data.replace("_X", "_y"))
         self.ch.idata = IIterable(x, y, self.ch.cfg['chunk_size'])
-        self.ch.add_msg_to_q('agg', self.ch.QUEUE, self.ch.QUEUE, 'train_req')
+        self.ch.add_msg_to_q(self.ch.wt, self.ch.QUEUE, self.ch.QUEUE, 'train_req')
 
     def train_ok_send(self, data):
         self.ch.add_msg_to_q(data, self.ch.QUEUE, self.ch.QUEUE, 'train_ok')
@@ -128,7 +133,7 @@ class Base_Engine:
         msg = {'id': self.ch.QUEUE, 'loss': h.history['loss'][-1], 'step': self.ch.train_steps}
         for i in range(len(self.ch.model.trainable_variables)):
             msg[i] = self.ch.model.trainable_variables[i].numpy().tobytes().hex()
-        self.ch.add_msg_to_q('agg', self.ch.QUEUE, dumps(msg), 'train_metrics')
+        self.ch.add_msg_to_q(self.ch.wt, self.ch.QUEUE, dumps(msg), 'train_metrics')
         self.ch.train_steps += 1
 
     def process_metrics_job(self, data):
@@ -156,12 +161,14 @@ class Base_Engine:
             yhat = self.ch.raw_model.predict(x)
             score = mse(yhat, y)
             data['global-loss'] = float(score.numpy())
-            if data['global-loss'] < self.ch.g_min:
-                self.ch.raw_model.save(os.path.join(self.ch.run_metrics_location, "model.h5"))
-                self.ch.g_min = data['global-loss']
-                self.ch.patience_test = 0
-            else:
-                self.ch.patience_test += 1
+            if int(dct['step']) > 1:
+                less_than = bool(self.ch.last_target_score > data['global-loss'])
+                if less_than and self.ch.cfg['direction_min']:
+                    self.ch.raw_model.save(os.path.join(self.ch.run_metrics_location, "model.h5"))
+                    self.ch.g_min = data['global-loss']
+                    self.ch.patience_test = 0
+                else:
+                    self.ch.patience_test += 1
             self.ch.run_data.append(data)
             save_file = open(os.path.join(self.ch.run_metrics_location, "training.json"), "w")
             json.dump(self.ch.run_data, save_file, indent=6)
@@ -175,8 +182,13 @@ class Base_Engine:
             if self.ch.patience_test < self.ch.cfg['patience']:
                 self.post_agg_processing(weights)
             else:
-                print("Patience exceeded, experiment terminated!*100")
+                print("***Patience exceeded, experiment terminated!***\n\n\n")
+                q_items = list(self.ch.comm_metrics.keys())
+                for prty in q_items:
+                    self.ch.add_msg_to_q(prty, self.ch.QUEUE, "blank", 'reset')
                 self.ch.comms_enabled = False
+            self.ch.last_target_score = data['global-loss']
+            self.ch.round += 1
         else:
             self.ch.add_msg_to_q(dct['id'], self.ch.QUEUE, "standbye", 'info')
 
@@ -193,8 +205,11 @@ class Base_Engine:
             weights = np.ndarray(self.ch.model.trainable_variables[i].numpy().shape, dtype=np.float32,
                                  buffer=bytes.fromhex(dct[str(i)]))
             self.ch.model.trainable_variables[i].assign(weights)
-        self.ch.add_msg_to_q('agg', self.ch.QUEUE, self.ch.QUEUE, 'train_req')
-
+        self.ch.add_msg_to_q(self.ch.wt, self.ch.QUEUE, self.ch.QUEUE, 'train_req')
+        
+    def reset(self, data):
+        self.ch.comms_enabled = False
+        LOGGER.warning("****\n\n\n\n node resetting \n\n\n\n*****")
 
 
 
@@ -207,7 +222,7 @@ class GT_fedAvg_Engine(Base_Engine):
         x = np.load(data)
         y = np.load(data.replace("_X", "_y"))
         self.ch.idata = IIterable(x, y, self.ch.cfg['chunk_size'])
-        self.ch.add_msg_to_q('agg', self.ch.QUEUE, self.ch.QUEUE, 'train_req')
+        self.ch.add_msg_to_q(self.ch.wt, self.ch.QUEUE, self.ch.QUEUE, 'train_req')
     def start_train(self, data):
         x, y = next(self.ch.idata)
         tl = 0
@@ -218,7 +233,7 @@ class GT_fedAvg_Engine(Base_Engine):
                'step': self.ch.train_steps}
         for i in range(len(self.ch.model.trainable_variables)):
             msg[i] = self.ch.model.trainable_variables[i].numpy().tobytes().hex()
-        self.ch.add_msg_to_q('agg', self.ch.QUEUE, dumps(msg), 'train_metrics')
+        self.ch.add_msg_to_q(self.ch.wt, self.ch.QUEUE, dumps(msg), 'train_metrics')
         self.ch.train_steps += 1
 
     def step(self, X, y):
@@ -248,7 +263,7 @@ class GT_fedsgd_engine(GT_fedAvg_Engine):
                'step': self.ch.train_steps}
         for i in range(len(self.ch.model.trainable_variables)):
             msg[i] = grads[i].numpy().tobytes().hex()
-        self.ch.add_msg_to_q('agg', self.ch.QUEUE, dumps(msg), 'train_metrics')
+        self.ch.add_msg_to_q(self.ch.wt, self.ch.QUEUE, dumps(msg), 'train_metrics')
         self.ch.train_steps += 1
         
         

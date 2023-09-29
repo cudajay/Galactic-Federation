@@ -5,6 +5,7 @@ import pdb
 import socket
 from burst_connection import Msg, Burst_connection
 from random import randint
+import time
 
 def random_with_N_digits(n):
     range_start = 10**(n-1)
@@ -18,14 +19,20 @@ class Pub_BC(Burst_connection):
         self.cfg = None
 
 def main():
-    print("entering")
     hostname = socket.gethostname()
     IPAddr = socket.gethostbyname(hostname)
     IPAddr = str(IPAddr) + str(random_with_N_digits(5))
-    dmy = Pub_BC('agg', IPAddr)
-    dmy.comm_metrics['agg'] = -1
-    dmy.add_msg_to_q('agg', dmy.QUEUE,dmy.QUEUE, 'init')
-    dmy.run()
+    i = 0
+    while True:
+        id_ip = IPAddr + str(i)
+        print("entering")
+        aggi = 'agg' + str(i)
+        dmy = Pub_BC(aggi, id_ip)
+        dmy.comm_metrics[aggi] = -1
+        dmy.add_msg_to_q(aggi, dmy.QUEUE,dmy.QUEUE, 'init')
+        dmy.run()
+        time.sleep(30)
+        i += 1
     
     
 
