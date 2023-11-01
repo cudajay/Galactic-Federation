@@ -13,7 +13,7 @@ import numpy as np
 import glob
 from json import JSONEncoder
 import logging
-from utils import IIterable, directory_manager, parse_init_config
+from utils import IIterable, directory_manager, parse_init_config, tf_loader
 from random import shuffle
 import datetime
 from random import randint
@@ -39,7 +39,7 @@ class Agg_BC(Burst_connection):
     def __init__(self, writeto: str, consumefrom: str, expn, cfg):
         super().__init__(writeto, consumefrom)
         self.cfg = cfg
-        self.raw_model = tf.keras.models.load_model(self.cfg['base_model'])
+        self.raw_model = tf_loader(tf.keras.models.load_model(self.cfg['base_model']), self.cfg)
         self.raw_model.compile(loss=self.cfg['loss_metric'], optimizer=self.cfg['optimizer'])     
         self.run_metrics_location = directory_manager(self.cfg, expn)
         self.run_data = []
@@ -97,7 +97,7 @@ def main():
         LOGGER.warning("\n\n\n\n ****In DEBUG LOOP****\n\n\n")
         while True:
             pass
-    n_exps = 10
+    n_exps = 5
     param_list = parse_init_config(cfg, n_exps)
     LOGGER.warning(str(param_list))
     for i,cfgi in zip(range(n_exps), param_list):

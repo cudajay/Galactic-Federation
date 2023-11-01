@@ -1,3 +1,3 @@
 #!/bin/sh
 
-minikube mount ~/data:/home/docker/dummy
+minikube mount ~/data:/home/docker/dummy &

@@ -4,6 +4,9 @@ import shutil
 import json
 import yaml
 import optuna
+import tensorflow as tf
+import random
+import string
 
 class IIterable:
     def __init__(self, x, y, chunk_size) -> None:
@@ -31,7 +34,9 @@ class Rule:
         self.action_handler(*self.rule_handler(*args, **kwargs))
 
 def directory_manager(cfg, expn):
-    today = str(date.today())
+    characters = string.ascii_letters + string.digits
+    random_string = ''.join(random.choice(characters) for _ in range(10))
+    today = str(date.today()) + "-" + random_string
     dir_ = os.path.join("/app","data", "logs", f"{today}-{cfg['arch']}-{cfg['re']}")
     if os.path.exists(dir_) and expn == 0:
         shutil.rmtree(dir_)
@@ -81,5 +86,21 @@ def parse_init_config(cfg:dict, nsuggestions:int):
             tmp[k] = v
         ret.append(tmp)
     return ret
+
+def tf_loader(model, cfg):
+    for k,v in cfg.items():
+        if k[-4:] != "_exp":
+            continue
+        for i, layer in enumerate(model.layers):
+            if layer.name == k[:-4]:
+                if layer.name[:7] == "dropout":
+                    new_dropout_layer = tf.keras.layers.Dropout(v)
+                    model.layers[i] = new_dropout_layer
+                if layer.name[:5] == "lstm":
+                    new_lstm_layer = tf.keras.layers.LSTM(v, return_sequences=layer.return_sequences)    
+                    # Replace the existing LSTM layer with the new one
+                    model.layers[i] = new_lstm_layer
+                break
+    return model
 
 

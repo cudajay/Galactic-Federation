@@ -9,7 +9,7 @@ import json
 import os
 from json import loads, dumps
 import random
-
+import time
 mse = MeanSquaredError()
 
 from json import loads, dumps
@@ -226,9 +226,15 @@ class GT_fedAvg_Engine(Base_Engine):
     def start_train(self, data):
         x, y = next(self.ch.idata)
         tl = 0
+        t1 = time.time()
+        if self.ch.train_steps:
+            LOGGER.warning("Time since last train {:.2f} seconds".format(t1 - self.last_train))
         for _ in range(self.ch.cfg['epochs']):
             tl = self.step(x, y)
             LOGGER.warning(f"loss: {tl}")
+        t2 = time.time()
+        self.last_train = t2
+        LOGGER.warning("Elapsed time: {:.2f} seconds".format(t2-t1))
         msg = {'id': self.ch.QUEUE, 'loss': tl.numpy().tobytes().hex(),
                'step': self.ch.train_steps}
         for i in range(len(self.ch.model.trainable_variables)):
