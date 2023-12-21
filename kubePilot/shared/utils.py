@@ -93,13 +93,16 @@ def tf_loader(model, cfg):
             continue
         for i, layer in enumerate(model.layers):
             if layer.name == k[:-4]:
-                if layer.name[:7] == "dropout":
+                if "dropout" in layer.name:
                     new_dropout_layer = tf.keras.layers.Dropout(v)
                     model.layers[i] = new_dropout_layer
                 if layer.name[:5] == "lstm":
                     new_lstm_layer = tf.keras.layers.LSTM(v, return_sequences=layer.return_sequences)    
                     # Replace the existing LSTM layer with the new one
                     model.layers[i] = new_lstm_layer
+                if "conv1d" in layer.name:
+                    new_layer = tf.keras.layers.Conv1D(filters=v, kernel_size=3, activation='relu')
+                    model.layers[i] = new_layer
                 break
     return model
 

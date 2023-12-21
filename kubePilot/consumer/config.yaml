@@ -1,25 +1,28 @@
-base_model: '/app/src/consumer/base-25.h5'
+base_model:
+  type: 2
+  range: ['/app/src/consumer/basecnnlstm25.h5']
 debug: 0
 loss_metric: 'mse'
-arch: 'lstm'
+arch: 'cnnlstm25'
 re: 'fedAvg'
 optimizer: 'adam'
 nexp: 10
 direction_min: 1
 validation_split: 0.2
-dropout:
+dropout_39_exp:
   type: 1
-  range: [.1,.6]
-lstm_batch_size:
+  range: [.3,.7]
+conv1d_17_exp:
   type: 0
-  range: [35,100]
+  range: [16,64]
+
 chunk_size: 196
 epochs:
   type: 0
-  range: [2,10]
+  range: [3,12]
 C: 
   type: 1
-  range: [.5, 1.]
+  range: [.25, .9]
 lr: 
   type: 1
   range: [0.0005, 0.002]
