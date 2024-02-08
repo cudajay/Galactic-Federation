@@ -88,22 +88,43 @@ def parse_init_config(cfg:dict, nsuggestions:int):
     return ret
 
 def tf_loader(model, cfg):
-    for k,v in cfg.items():
-        if k[-4:] != "_exp":
-            continue
-        for i, layer in enumerate(model.layers):
-            if layer.name == k[:-4]:
-                if "dropout" in layer.name:
-                    new_dropout_layer = tf.keras.layers.Dropout(v)
-                    model.layers[i] = new_dropout_layer
-                if layer.name[:5] == "lstm":
-                    new_lstm_layer = tf.keras.layers.LSTM(v, return_sequences=layer.return_sequences)    
-                    # Replace the existing LSTM layer with the new one
-                    model.layers[i] = new_lstm_layer
-                if "conv1d" in layer.name:
-                    new_layer = tf.keras.layers.Conv1D(filters=v, kernel_size=3, activation='relu')
-                    model.layers[i] = new_layer
-                break
-    return model
+    if cfg['skip_load']:
+        return model
+    
+    dct = model.get_config()
+    for l in dct['layers'][:-2]:
+        if l['class_name'] == 'MultiHeadAttention':
+            k = 'nheads'
+            l['config']['num_heads'] = random.choice(range(cfg[k][0], cfg[k][1]))
+            k = 'vdim'
+            l['config']['value_dim'] = random.choice(range(cfg[k][0], cfg[k][1]))
+            k = 'kdim'
+            l['config']['key_dim'] = random.choice(range(cfg[k][0], cfg[k][1]))
+            k = 'tr_do'
+            l['config']['dropout'] = random.choice(range(cfg[k][0], cfg[k][1]))/10
+        if l['class_name'] == "LSTM":
+            k = 'lstm_u'
+            l['config']['units'] = random.choice(range(cfg[k][0], cfg[k][1]))
+        if l['class_name'] == "Conv1D":
+            k = "conv1d_ks"
+            l['config']['kernel_size'] = random.choice(range(cfg[k][0], cfg[k][1]))
+            k = "conv1d_f"
+            l['config']['filters'] = random.choice(range(cfg[k][0], cfg[k][1]))
+        if l['class_name'] == "Dropout":
+            k = "dropout_r"
+            l['config']['rate'] = random.choice(range(cfg[k][0], cfg[k][1]))/10 #vals from 0-10 to decimal
+        if l['class_name'] == "Dense":
+            k = 'dense_u'
+            l['config']['units'] = random.choice(range(cfg[k][0], cfg[k][1]))
+    #print(dct)
+    return model.__class__.from_config(dct)
+
+def split_composite(model):
+    head_dict = model.layers[0].get_config()
+    tail_dict = model.layers[1].get_config()
+    m1 = tf.keras.Model().__class__.from_config(head_dict)
+    m2 = tf.keras.Model().__class__.from_config(tail_dict)
+    return m1, m2
+
 
 

@@ -1,10 +1,21 @@
 base_model:
   type: 2
-  range: ['/app/src/consumer/basecnnlstm25.h5']
+  range: ['/app/src/consumer/trans-h.h5']
 debug: 0
 loss_metric: 'mse'
-arch: 'cnnlstm25'
-re: 'fedAvg'
+arch: 'trans-h'
+use25only: False
+skip_load: True
+re: 'fedAvg-h'
+lstm_u: [30,45]
+conv1d_ks: [6,20]
+conv1d_f: [6,30]
+dense_u: [10,15]
+nheads: [1,3]
+vdim: [10,20]
+kdim: [5,10]
+tr_do: [0, 1]
+dropout_r: [2, 6]
 optimizer: 'adam'
 nexp: 10
 direction_min: 1
@@ -20,14 +31,12 @@ chunk_size: 196
 epochs:
   type: 0
   range: [3,12]
-C: 
-  type: 1
-  range: [.25, .9]
+C: .8
 lr: 
   type: 1
-  range: [0.0005, 0.002]
+  range: [0.0005, 0.001]
 ntest: 3
-patience: 3
+patience: 10
 batch_size: 70
 l_s: 
   type: 0

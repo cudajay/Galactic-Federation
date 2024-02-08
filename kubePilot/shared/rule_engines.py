@@ -10,6 +10,7 @@ import os
 from json import loads, dumps
 import random
 import time
+import sys, traceback
 mse = MeanSquaredError()
 
 from json import loads, dumps
@@ -19,6 +20,14 @@ LOG_FORMAT = ('%(levelname) -10s %(asctime)s %(name) -30s %(funcName) '
               '-35s %(lineno) -5d: %(message)s')
 LOGGER = logging.getLogger(__name__)
 
+def padd(x:np.ndarray):
+    if x.shape[-1] ==25:
+        shp = (*x.shape[:2], 55)
+        z = np.zeros(shp)
+        z[:shp[0],:shp[1],:25] = x
+        return z
+    else:
+        return x
 
 def data_handler(data):
     if type(data) == bytes:
@@ -90,7 +99,13 @@ class Base_Engine:
             return (self.null_job, [])
 
     def action_executor(self, job, data):
-        job(data_handler(data))
+        try:
+            job(data_handler(data))
+        except Exception as e:
+                LOGGER.error(e)
+                LOGGER.error(self.ch)
+                LOGGER.error(traceback.print_exc(file=sys.stdout))
+
 
     def null_job(self, data):
         pass
@@ -112,10 +127,12 @@ class Base_Engine:
             self.ch.re = GT_fedAvg_Engine(self.ch)
         if self.ch.cfg['re'] == 'fedSgd':
             self.ch.re = GT_fedsgd_engine(self.ch)
+        if self.ch.cfg['re'] == 'fedAvg-h':
+            self.ch.re = GT_fedAvgh_Engine(self.ch)
         self.ch.add_msg_to_q(self.ch.wt, self.ch.QUEUE, self.ch.QUEUE, "update_data_req")
 
     def send_data_job(self, data):
-        self.ch.add_msg_to_q(data, self.ch.QUEUE, self.ch.data_files.pop(0), 'init_data')
+        self.ch.add_msg_to_q(data, self.ch.QUEUE, self.ch.get_next_data(), 'init_data')
 
     def init_data_job(self, data):
         LOGGER.info(data)
@@ -129,6 +146,7 @@ class Base_Engine:
         
     def start_train(self, data):
         x, y = next(self.ch.idata)
+        x = padd(x)
         h = self.ch.model.fit(x, y, batch_size=64, epochs=8, verbose=True)
         msg = {'id': self.ch.QUEUE, 'loss': h.history['loss'][-1], 'step': self.ch.train_steps}
         for i in range(len(self.ch.model.trainable_variables)):
@@ -138,12 +156,14 @@ class Base_Engine:
 
     def process_metrics_job(self, data):
         dct = loads(data)
+        if self.ch.buffer[-1] > dct['step']:
+            return
         if dct['step'] not in self.ch.buffer:
             self.ch.buffer[dct['step']] = [dct]
         else:
             self.ch.buffer[dct['step']].append(dct)
         ids = set(map(lambda x: x['id'], self.ch.buffer[dct['step']]))
-        if (ids.intersection(self.ch.C) == self.ch.C) or (len(ids) == len(list(self.ch.comm_metrics.keys()))):
+        if len(ids.intersection(self.ch.C)) == len(self.ch.C):
             data = {}
             for d in self.ch.buffer[dct['step']]:
                 data[f"{d['id']}-step"] = d['step']
@@ -157,10 +177,15 @@ class Base_Engine:
                                          buffer=bytes.fromhex(v))
                 update = update / len(self.ch.comm_metrics)
                 self.ch.raw_model.trainable_variables[i].assign(update)
-            x, y = next(self.ch.idata)
-            yhat = self.ch.raw_model.predict(x)
-            score = mse(yhat, y)
-            data['global-loss'] = float(score.numpy())
+
+            scores = []
+            for id in self.ch.idata:
+                x, y = next(id)
+                x = padd(x)
+                yhat = self.ch.raw_model.predict(x)
+                scores.append(mse(yhat, y).numpy())
+            data['global-loss'] = float(np.mean(scores))
+
             if int(dct['step']) > 1:
                 less_than = bool(self.ch.last_target_score > data['global-loss'])
                 if less_than and self.ch.cfg['direction_min']:
@@ -174,7 +199,7 @@ class Base_Engine:
             json.dump(self.ch.run_data, save_file, indent=6)
             save_file.close()
 
-            LOGGER.warning(f"TEST UPDATE: {score.numpy()}")
+            LOGGER.warning(f"TEST UPDATE: {data['global-loss']}")
             weights = {}
             for i in range(len(self.ch.raw_model.trainable_variables)):
                 weights[i] = self.ch.raw_model.trainable_variables[i].numpy().tobytes().hex()
@@ -189,6 +214,8 @@ class Base_Engine:
                 self.ch.comms_enabled = False
             self.ch.last_target_score = data['global-loss']
             self.ch.round += 1
+            if len(self.ch.buffer) > 5:
+                self.ch.buffer.pop(0)
         else:
             self.ch.add_msg_to_q(dct['id'], self.ch.QUEUE, "standbye", 'info')
 
@@ -225,6 +252,7 @@ class GT_fedAvg_Engine(Base_Engine):
         self.ch.add_msg_to_q(self.ch.wt, self.ch.QUEUE, self.ch.QUEUE, 'train_req')
     def start_train(self, data):
         x, y = next(self.ch.idata)
+        x = padd(x)
         tl = 0
         t1 = time.time()
         if self.ch.train_steps:
@@ -271,6 +299,99 @@ class GT_fedsgd_engine(GT_fedAvg_Engine):
             msg[i] = grads[i].numpy().tobytes().hex()
         self.ch.add_msg_to_q(self.ch.wt, self.ch.QUEUE, dumps(msg), 'train_metrics')
         self.ch.train_steps += 1
+
+class GT_fedAvgh_Engine(GT_fedAvg_Engine):
+    def __int__(self, connection_handler):
+        super().__init__(connection_handler)
+
+    def start_train(self, data):
+        x, y = next(self.ch.idata)
+        x = padd(x)
+        tl = 0
+        t1 = time.time()
+        if self.ch.train_steps:
+            LOGGER.warning("Time since last train {:.2f} seconds".format(t1 - self.last_train))
+        for _ in range(self.ch.cfg['epochs']):
+            tl = self.step(x, y)
+            LOGGER.warning(f"loss: {tl}")
+        t2 = time.time()
+        self.last_train = t2
+        LOGGER.warning("Elapsed time: {:.2f} seconds".format(t2-t1))
+        msg = {'id': self.ch.QUEUE, 'loss': tl.numpy().tobytes().hex(),
+               'step': self.ch.train_steps}
+        for i in range(len(self.ch.model.layers[1].trainable_variables)):
+            msg[i] = self.ch.model.layers[1].trainable_variables[i].numpy().tobytes().hex()
+        self.ch.add_msg_to_q(self.ch.wt, self.ch.QUEUE, dumps(msg), 'train_metrics')
+        self.ch.train_steps += 1
+
+    def process_metrics_job(self, data):
+        dct = loads(data)
+        self.ch.buffer[dct['step']].append(dct)
+        ids = set(map(lambda x: x['id'], self.ch.buffer[self.ch.step]))
+        if (len(ids.intersection(self.ch.C)) == len(self.ch.C) and
+            self.ch.round != 0) or (self.ch.round == 0 and len(ids)>= 10):
+            data = {}
+            for d in self.ch.buffer[self.ch.step]:
+                data[f"{d['id']}-step"] = d['step']
+                data[f"{d['id']}-loss"] = float(np.ndarray(1, dtype=np.float32,buffer=bytes.fromhex(d['loss']))[0])
+
+            for i in range(len(self.ch.tail.trainable_variables)):
+                update = np.zeros(self.ch.tail.trainable_variables[i].numpy().shape)
+                vals = list(map(lambda x: x[str(i)], self.ch.buffer[self.ch.step]))
+                for v in vals:
+                    update += np.ndarray(self.ch.tail.trainable_variables[i].numpy().shape, dtype=np.float32,
+                                         buffer=bytes.fromhex(v))
+                update = update / len(self.ch.comm_metrics)
+                self.ch.tail.trainable_variables[i].assign(update)
+
+            scores = []
+            for id in self.ch.idata:
+                x, y = next(id)
+                x = padd(x)
+                yhat = self.ch.tail.predict(x)
+                scores.append(mse(yhat, y).numpy())
+            data['global-loss'] = float(np.mean(scores))
+
+            if int(self.ch.step) > 1:
+                less_than = bool(self.ch.last_target_score > data['global-loss'])
+                if less_than and self.ch.cfg['direction_min']:
+                    self.ch.tail.save(os.path.join(self.ch.run_metrics_location, "tail.h5"))
+                    self.ch.g_min = data['global-loss']
+                    self.ch.patience_test = 0
+                else:
+                    self.ch.patience_test += 1
+            self.ch.run_data.append(data)
+            save_file = open(os.path.join(self.ch.run_metrics_location, "training.json"), "w")
+            json.dump(self.ch.run_data, save_file, indent=6)
+            save_file.close()
+
+            LOGGER.warning(f"TEST UPDATE: {data['global-loss']}")
+            weights = {}
+            for i in range(len(self.ch.tail.trainable_variables)):
+                weights[i] = self.ch.tail.trainable_variables[i].numpy().tobytes().hex()
+            # send broadcast signal to update_weights as long patience is within tolerance
+            if self.ch.patience_test < self.ch.cfg['patience']:
+                self.post_agg_processing(weights)
+            else:
+                print("***Patience exceeded, experiment terminated!***\n\n\n")
+                q_items = list(self.ch.comm_metrics.keys())
+                for prty in q_items:
+                    self.ch.add_msg_to_q(prty, self.ch.QUEUE, "blank", 'reset')
+                self.ch.comms_enabled = False
+            self.ch.last_target_score = data['global-loss']
+            self.ch.round += 1
+            self.ch.step += 1
+            self.ch.buffer[self.ch.step] =[]
+        else:
+            self.ch.add_msg_to_q(dct['id'], self.ch.QUEUE, "standbye", 'info')
+
+    def update_weights_job(self, data):
+        dct = loads(data)
+        for i in range(len(self.ch.model.layers[1].trainable_variables)):
+            weights = np.ndarray(self.ch.model.layers[1].trainable_variables[i].numpy().shape, dtype=np.float32,
+                                 buffer=bytes.fromhex(dct[str(i)]))
+            self.ch.model.layers[1].trainable_variables[i].assign(weights)
+        self.ch.add_msg_to_q(self.ch.wt, self.ch.QUEUE, self.ch.QUEUE, 'train_req')
         
         
 '''
